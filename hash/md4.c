@@ -45,8 +45,9 @@ static u_int32_t md4_s[MD4_SSIZE] = {
 };
 
 moduleinfo_t moduleinfo(void);
-u_int8_t *hash(u_int8_t *d, u_int32_t len);
+void hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
 u_int32_t hashlen(void);
+void hash_internal(u_int32_t *X, u_int32_t *H);
 
 moduleinfo_t moduleinfo(void)
 {
@@ -59,70 +60,79 @@ u_int32_t hashlen(void)
     return MD4_HASHLEN;
 }
 
-u_int8_t *hash(u_int8_t *d_, u_int32_t len)
+void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
-    u_int8_t *d, *ret;
-    u_int32_t *x, X[16], H[MD4_IVSIZE], A, B, C, D;
-    u_int32_t i, j, k, t, b, blen, r, m;
-    
-    b = len*8;
-    blen = b;
-    d = (u_int8_t *)malloc(len+(MD4_PADMULTIPLE/8));
-    assert(d != NULL);
-    memset(d+len, 0, MD4_PADMULTIPLE/8);
-    memcpy(d, d_, len);
-
-    d[blen/8] |= 1<<7; blen++;
-    r = MD4_PADMULTIPLE-((blen%MD4_PADMULTIPLE)+64);
-    if(r < 0) r += 512;
-    blen += r;
-
-    for(i = 0; i < 64; i++, blen++) {
-        d[blen/8] |= ((b&1)<<(blen%8)); b>>=1; if(blen%8 == 0) { len++; }
-    }
-
-    m = (blen+MD4_PADMULTIPLE-1)/MD4_PADMULTIPLE;
-    x = (u_int32_t *)d;
+    u_int32_t X[16], H[MD4_IVSIZE];
+    u_int32_t i, j, k, r;
 
     for(i = 0; i < MD4_IVSIZE; i++) H[i] = md4_iv[i];
 
-    for(i = 0; i < m; i++) {
+    for(i = 0; i < len/64; i++) {
         for(j = 0; j < 16; j++)
             for(X[j] = 0, k = 0; k < 4; k++)
                 X[j] |= d[(16*i+j)*sizeof(u_int32_t)+(3-k)]<<(8*(3-k));
 
-        A = H[0]; B = H[1]; C = H[2]; D = H[3];
-        /* round one */
-        for(j = 0; j < 16; j++) {
-            t = A+((B&C)|(~B&D))+X[md4_z[j]]+md4_y[0];
-            A = D; D = C; C = B; B = (t << md4_s[j])|(t >> (32-md4_s[j]));
-        }
-        /* round two */
-        for(j = 16; j < 32; j++) {
-            t = A+((B&C)|(B&D)|(C&D))+X[md4_z[j]]+md4_y[1];
-            A = D; D = C; C = B; B = (t << md4_s[j])|(t >> (32-md4_s[j]));
-        }
-        /* round three */
-        for(j = 32; j < 48; j++) {
-            t = A+(B^C^D)+X[md4_z[j]]+md4_y[2];
-            A = D; D = C; C = B; B = (t << md4_s[j])|(t >> (32-md4_s[j]));
-        }
-        /* update chaining values */
-        H[0] += A; H[1] += B; H[2] += C; H[3] += D;
+        hash_internal(X, H);
     }
 
-    if(d != d_) free(d);
-    ret = (u_int8_t *)malloc(MD4_HASHLEN/8);
-    assert(ret != NULL);
-    for(i = 0; i < MD4_IVSIZE; i++)
+    for(j = 0; j < 16; j++) X[j] = 0;
+    for(i = i*64, j = 0; i < len; i++) {
+        X[j] |= d[i]<<(8*(i%4));
+        if(i%4 == 3) j++;
+    }
+
+    len *= 8; /* FIXME --> we need a long long */
+    X[j] |= (1<<7)<<(8*(i%4));
+    r = MD4_PADMULTIPLE-(((len+1)%MD4_PADMULTIPLE)+64);
+    if(r < 0) {
+        hash_internal(X, H);
+        for(j = 0; j < 16; j++) X[j] = 0;
+    }
+    j = 14;
+
+    for(i = 0; i < 64; i++) {
+        X[j+(i/32)] |= ((len&1)<<(i%32)); len>>=1;
+    }
+
+    hash_internal(X, H);
+
+/*
 #ifdef BIG_ENDIAN
+    for(i = 0; i < MD4_IVSIZE; i++)
         for(j = 0; j < 4; j++)
-            memcpy(ret+(i*sizeof(u_int32_t))+j, (&H[i])+(3-j), 1);
+            out[(i*sizeof(u_int32_t))+j] = ((u_int8_t*)&H[i])[3-j];
 #else
-        memcpy(ret+(i*sizeof(u_int32_t)), &H[i], sizeof(u_int32_t));
+    memcpy(out, H, MD4_IVSIZE*sizeof(u_int32_t));
 #endif
+*/
+    memcpy(out, H, MD4_IVSIZE*sizeof(u_int32_t));
+
+    return;
+}
+
+void hash_internal(u_int32_t *X, u_int32_t *H)
+{
+    u_int32_t A, B, C, D, j, t;
     
-    return ret;
+    A = H[0]; B = H[1]; C = H[2]; D = H[3];
+    /* round one */
+    for(j = 0; j < 16; j++) {
+        t = A+((B&C)|(~B&D))+X[md4_z[j]]+md4_y[0];
+        A = D; D = C; C = B; B = (t << md4_s[j])|(t >> (32-md4_s[j]));
+    }
+    /* round two */
+    for(j = 16; j < 32; j++) {
+        t = A+((B&C)|(B&D)|(C&D))+X[md4_z[j]]+md4_y[1];
+        A = D; D = C; C = B; B = (t << md4_s[j])|(t >> (32-md4_s[j]));
+    }
+    /* round three */
+    for(j = 32; j < 48; j++) {
+        t = A+(B^C^D)+X[md4_z[j]]+md4_y[2];
+        A = D; D = C; C = B; B = (t << md4_s[j])|(t >> (32-md4_s[j]));
+    }
+    /* update chaining values */
+    H[0] += A; H[1] += B; H[2] += C; H[3] += D;
+    return;
 }
 
 /* EOF md4.c */

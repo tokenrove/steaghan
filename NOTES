@@ -6,19 +6,23 @@ zero critial areas of memory after use...
 in the future we'll have to provide: - a way to pass variable arguments
                                        to modules
                                      - initialization functions for all
-                                       module types
+                                       module types [can contribute to fixing
+				       hash module inefficiencies]
                                      - bignum support for things like
                                        file length and such
                                      - loading keys from files [including
                                        ciphered files, and having to prompt
                                        for passphrases securely]
                                      - a consistent API
+				     - hash user's key against non-modifiable
+				       bits in wrapper
 				     - modules and transparent file filters
 				     - support for paletted images
                                      - support for streams (!)
 				     - statistical analysis in tests
 				     - better error handling than assert
                                      - better error checking, too. [wrapread(handle, -1), anyone?]
+				     - some way to profile dl modules
 think about CRCs, and also storing lengths with some BER-like length
   encoding, such that we don't give out obvious knowledge of the fu.
 use the all-or-nothing transform.
@@ -28,8 +32,9 @@ BUGS, ET CETERA
 
 wrapper/pgm and wrapper/ppm: can't find P2/P3 style files with which to test!
 wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
-hash/md*, hash/ripemd160: some minor inefficiencies, it would be nice not
-                          to do memory allocation.
+wrapper/wav: only PCM support, no support for RIFFs with different chunk
+             layouts, unreliable! 
+hash/md*, hash/ripemd160: some minor inefficiencies
 
 
 API
@@ -53,8 +58,8 @@ void permuclose(void *permuhandle);
 
 --
 hash modules:
-u_int32_t hashlenfunc_t(void);
-u_int8_t *hash(u_int8_t *data, u_int32_t length);
+u_int32_t hashlen(void);
+void hash(u_int8_t *data, u_int32_t length, u_int8_t *hash);
 
 --
 wrapper modules:

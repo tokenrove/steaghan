@@ -62,8 +62,9 @@ static u_int32_t ripemd160_s[2][RIPEMD160_SSIZE] = {
 };
 
 moduleinfo_t moduleinfo(void);
-u_int8_t *hash(u_int8_t *d, u_int32_t len);
+void hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
 u_int32_t hashlen(void);
+void hash_internal(u_int32_t *X, u_int32_t *H);
 
 moduleinfo_t moduleinfo(void)
 {
@@ -80,163 +81,176 @@ u_int32_t hashlen(void)
 /* s/32/sizeof(a)*8/ */
 #define RIPEMD160_ROLL(a, b) (((a) << (b))|((a) >> (32-(b))))
 
-u_int8_t *hash(u_int8_t *d_, u_int32_t len)
+
+void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
-    u_int8_t *d, *ret;
-    u_int32_t *x, X[16], H[RIPEMD160_IVSIZE], A[2], B[2], C[2], D[2], E[2];
-    u_int32_t i, j, k, t, b, blen, r, m, side;
-    
-    b = len*8;
-    blen = b;
-    d = (u_int8_t *)malloc(len+(RIPEMD160_PADMULTIPLE/8));
-    assert(d != NULL);
-    memset(d+len, 0, RIPEMD160_PADMULTIPLE/8);
-    memcpy(d, d_, len);
-
-    d[blen/8] |= 1<<7; blen++;
-    r = RIPEMD160_PADMULTIPLE-((blen%RIPEMD160_PADMULTIPLE)+64);
-    if(r < 0) r += 512;
-    blen += r;
-
-    for(i = 0; i < 64; i++, blen++) {
-        d[blen/8] |= ((b&1)<<(blen%8)); b>>=1; if(blen%8 == 0) { len++; }
-    }
-
-    m = (blen+RIPEMD160_PADMULTIPLE-1)/RIPEMD160_PADMULTIPLE;
-    x = (u_int32_t *)d;
+    u_int32_t X[16], H[RIPEMD160_IVSIZE];
+    u_int32_t i, j, k, r;
 
     for(i = 0; i < RIPEMD160_IVSIZE; i++) H[i] = ripemd160_iv[i];
 
-    for(i = 0; i < m; i++) {
+    for(i = 0; i < len/64; i++) {
         for(j = 0; j < 16; j++)
             for(X[j] = 0, k = 0; k < 4; k++)
                 X[j] |= d[(16*i+j)*sizeof(u_int32_t)+(3-k)]<<(8*(3-k));
 
-        /* left side */
-        side = 0;
-        
-        A[side] = H[0]; B[side] = H[1]; C[side] = H[2]; D[side] = H[3];
-        E[side] = H[4];
-            
-        /* round one */
-        for(j = 0; j < 16; j++) {
-            t = A[side]+(B[side]^C[side]^D[side])+X[ripemd160_z[side][j]]+
-                ripemd160_y[side][0];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round two */
-        for(j = 16; j < 32; j++) {
-            t = A[side]+((B[side]&C[side])|(~B[side]&D[side]))+
-                X[ripemd160_z[side][j]]+ripemd160_y[side][1];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round three */
-        for(j = 32; j < 48; j++) {
-            t = A[side]+((B[side]|~C[side])^D[side])+X[ripemd160_z[side][j]]+
-                ripemd160_y[side][2];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round four */
-        for(j = 48; j < 64; j++) {
-            t = A[side]+((B[side]&D[side])|(C[side]&~D[side]))+
-                X[ripemd160_z[side][j]]+ripemd160_y[side][3];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round five */
-        for(j = 64; j < 80; j++) {
-            t = A[side]+(B[side]^(C[side]|~D[side]))+
-                X[ripemd160_z[side][j]]+ripemd160_y[side][4];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-
-        /* right side */
-        side = 1;
-
-        A[side] = H[0]; B[side] = H[1]; C[side] = H[2]; D[side] = H[3];
-        E[side] = H[4];
-            
-        /* round one */
-        for(j = 0; j < 16; j++) {
-            t = A[side]+(B[side]^(C[side]|~D[side]))+
-                X[ripemd160_z[side][j]]+ripemd160_y[side][0];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round two */
-        for(j = 16; j < 32; j++) {
-            t = A[side]+((B[side]&D[side])|(C[side]&~D[side]))+
-                X[ripemd160_z[side][j]]+ripemd160_y[side][1];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round three */
-        for(j = 32; j < 48; j++) {
-            t = A[side]+((B[side]|~C[side])^D[side])+X[ripemd160_z[side][j]]+
-                ripemd160_y[side][2];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round four */
-        for(j = 48; j < 64; j++) {
-            t = A[side]+((B[side]&C[side])|(~B[side]&D[side]))+
-                X[ripemd160_z[side][j]]+ripemd160_y[side][3];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-        /* round five */
-        for(j = 64; j < 80; j++) {
-            t = A[side]+(B[side]^C[side]^D[side])+X[ripemd160_z[side][j]]+
-                ripemd160_y[side][4];
-            A[side] = E[side]; E[side] = D[side];
-            D[side] = RIPEMD160_ROLL(C[side], 10);
-            C[side] = B[side];
-            B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
-        }
-
-        /* update chaining values */
-        t = H[0];
-        H[0] = H[1]+C[0]+D[1];
-        H[1] = H[2]+D[0]+E[1];
-        H[2] = H[3]+E[0]+A[1];
-        H[3] = H[4]+A[0]+B[1];
-        H[4] = t   +B[0]+C[1];
+        hash_internal(X, H);
     }
 
-    if(d != d_) free(d);
-    ret = (u_int8_t *)malloc(RIPEMD160_HASHLEN/8);
-    assert(ret != NULL);
-    for(i = 0; i < RIPEMD160_IVSIZE; i++)
+    for(j = 0; j < 16; j++) X[j] = 0;
+    for(i = i*64, j = 0; i < len; i++) {
+        X[j] |= d[i]<<(8*(i%4));
+        if(i%4 == 3) j++;
+    }
+
+    len *= 8; /* FIXME --> we need a long long instead */
+
+    X[j] |= (1<<7)<<(8*(i%4));
+    r = RIPEMD160_PADMULTIPLE-(((len+1)%RIPEMD160_PADMULTIPLE)+64);
+    if(r < 0) {
+        hash_internal(X, H);
+        for(j = 0; j < 16; j++) X[j] = 0;
+    }
+    j = 14;
+
+    for(i = 0; i < 64; i++) {
+        X[j+(i/32)] |= ((len&1)<<(i%32)); len>>=1;
+    }
+
+    hash_internal(X, H);
+
+    /*
 #ifdef BIG_ENDIAN
+    for(i = 0; i < RIPEMD160_IVSIZE; i++)
         for(j = 0; j < 4; j++)
-            memcpy(ret+(i*sizeof(u_int32_t))+j, (&H[i])+(3-j), 1);
+            out[(i*sizeof(u_int32_t))+j] = ((u_int8_t*)&H[i])[3-j];
 #else
-        memcpy(ret+(i*sizeof(u_int32_t)), &H[i], sizeof(u_int32_t));
-#endif
+    memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
+    #endif */
+
+    memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
+
+    return;
+}
+
+void hash_internal(u_int32_t *X, u_int32_t *H)
+{
+    u_int32_t A[2], B[2], C[2], D[2], E[2];
+    u_int32_t j, t, side;
     
-    return ret;
+    /* left side */
+    side = 0;
+        
+    A[side] = H[0]; B[side] = H[1]; C[side] = H[2]; D[side] = H[3];
+    E[side] = H[4];
+            
+    /* round one */
+    for(j = 0; j < 16; j++) {
+        t = A[side]+(B[side]^C[side]^D[side])+X[ripemd160_z[side][j]]+
+            ripemd160_y[side][0];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round two */
+    for(j = 16; j < 32; j++) {
+        t = A[side]+((B[side]&C[side])|(~B[side]&D[side]))+
+            X[ripemd160_z[side][j]]+ripemd160_y[side][1];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round three */
+    for(j = 32; j < 48; j++) {
+        t = A[side]+((B[side]|~C[side])^D[side])+X[ripemd160_z[side][j]]+
+            ripemd160_y[side][2];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round four */
+    for(j = 48; j < 64; j++) {
+        t = A[side]+((B[side]&D[side])|(C[side]&~D[side]))+
+            X[ripemd160_z[side][j]]+ripemd160_y[side][3];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round five */
+    for(j = 64; j < 80; j++) {
+        t = A[side]+(B[side]^(C[side]|~D[side]))+
+            X[ripemd160_z[side][j]]+ripemd160_y[side][4];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    
+    /* right side */
+    side = 1;
+    
+    A[side] = H[0]; B[side] = H[1]; C[side] = H[2]; D[side] = H[3];
+    E[side] = H[4];
+            
+    /* round one */
+    for(j = 0; j < 16; j++) {
+        t = A[side]+(B[side]^(C[side]|~D[side]))+
+            X[ripemd160_z[side][j]]+ripemd160_y[side][0];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round two */
+    for(j = 16; j < 32; j++) {
+        t = A[side]+((B[side]&D[side])|(C[side]&~D[side]))+
+            X[ripemd160_z[side][j]]+ripemd160_y[side][1];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round three */
+    for(j = 32; j < 48; j++) {
+        t = A[side]+((B[side]|~C[side])^D[side])+X[ripemd160_z[side][j]]+
+            ripemd160_y[side][2];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round four */
+    for(j = 48; j < 64; j++) {
+        t = A[side]+((B[side]&C[side])|(~B[side]&D[side]))+
+            X[ripemd160_z[side][j]]+ripemd160_y[side][3];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    /* round five */
+    for(j = 64; j < 80; j++) {
+        t = A[side]+(B[side]^C[side]^D[side])+X[ripemd160_z[side][j]]+
+            ripemd160_y[side][4];
+        A[side] = E[side]; E[side] = D[side];
+        D[side] = RIPEMD160_ROLL(C[side], 10);
+        C[side] = B[side];
+        B[side] = A[side]+RIPEMD160_ROLL(t, ripemd160_s[side][j]);
+    }
+    
+    /* update chaining values */
+    t = H[0];
+    H[0] = H[1]+C[0]+D[1];
+    H[1] = H[2]+D[0]+E[1];
+    H[2] = H[3]+E[0]+A[1];
+    H[3] = H[4]+A[0]+B[1];
+    H[4] = t   +B[0]+C[1];
+
+    return;
 }
 
 /* EOF ripemd160.c */

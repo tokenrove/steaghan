@@ -2,6 +2,8 @@
 This is steaghan version alpha zero. It is an alpha release, and is
 yet ready for public consumption - think of this as a preview.
 
+Bugs of severe note: the WAVE wrapper module should not be used.
+
 Acknowledgements:
   Huge thanks to Daniel Barnes, whose donation of access to fast hardware
 	was essential for this project.

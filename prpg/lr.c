@@ -32,6 +32,7 @@ typedef struct {
     u_int32_t catlen;
     hashfunc_t hash;
     u_int32_t hashlen;
+    u_int32_t *hashbuf;
 } permuhandle_t;
 
 moduleinfo_t moduleinfo(void)
@@ -67,6 +68,8 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
 
     p->hash = hash;
     p->hashlen = hashlen;
+    p->hashbuf = (u_int32_t *)malloc(hashlen/8);
+    assert(p->hashbuf != NULL);
     
     return (void *)p;
 }
@@ -83,19 +86,23 @@ u_int32_t permugen(void *p_)
 
         memcpy(p->catspace+p->keylen, &X+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        Y = Y ^ ((((u_int32_t*)(*p->hash)(p->catspace, p->catlen))[0])&((p->nbits+1)/2));
+        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        Y = Y ^ (p->hashbuf[0]&((p->nbits+1)/2));
 
         memcpy(p->catspace+p->keylen, &Y+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        X = X ^ (((u_int32_t*)(*p->hash)(p->catspace, p->catlen))[1]&((p->nbits+1)/2));
+        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        X = X ^ (p->hashbuf[1]&((p->nbits+1)/2));
 
         memcpy(p->catspace+p->keylen, &X+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        Y = Y ^ (((u_int32_t*)(*p->hash)(p->catspace, p->catlen))[2]&((p->nbits+1)/2));
+        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        Y = Y ^ (p->hashbuf[2]&((p->nbits+1)/2));
 
         memcpy(p->catspace+p->keylen, &Y+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        X = X ^ (((u_int32_t*)(*p->hash)(p->catspace, p->catlen))[3]&((p->nbits+1)/2));
+        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        X = X ^ (p->hashbuf[3]&((p->nbits+1)/2));
 
         ret = X|(Y<<((p->nbits+1)/2));
         p->i++;
@@ -110,6 +117,7 @@ void permuclose(void *p_)
     permuhandle_t *p = p_;
 
     free(p->catspace);
+    free(p->hashbuf);
     free(p);
 }
 

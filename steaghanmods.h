@@ -24,7 +24,7 @@ typedef struct {
 typedef moduleinfo_t (*moduleinfofunc_t)(void);
 /* hash modules */
 typedef u_int32_t (*hashlenfunc_t)(void);
-typedef u_int8_t *(*hashfunc_t)(u_int8_t *, u_int32_t);
+typedef u_int8_t *(*hashfunc_t)(u_int8_t *, u_int32_t, u_int8_t *);
 /* prpg modules */
 typedef void *(*permuinitfunc_t)(u_int32_t, u_int8_t *, u_int32_t,
                                  hashfunc_t, u_int32_t);
