@@ -1,5 +1,5 @@
 
-GENERAL
+GENERAL WISHLIST
 
 zero critial areas of memory after use...
 in the future we'll have to provide: - a way to pass variable arguments
@@ -12,8 +12,6 @@ in the future we'll have to provide: - a way to pass variable arguments
                                      - bignum support for things like
                                        file length and such
                                      - a consistent API
-				     - hash user's key against non-modifiable
-				       bits in wrapper
 				     - support for paletted images
                                      - support for streams (!)
 				     - statistical analysis in tests
@@ -23,6 +21,15 @@ in the future we'll have to provide: - a way to pass variable arguments
 think about CRCs, and also storing lengths with some BER-like length
   encoding, such that we don't give out obvious knowledge of the fu.
 use the all-or-nothing transform.
+
+
+NEARER-FUTURE WISHLIST
+
+- queuing file module
+- hash user's key against non-modifiable bits in wrapper
+- JPEG wrapper
+- PNG wrapper
+- TIFF wrapper
 
 
 BUGS, ET CETERA

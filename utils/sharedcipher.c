@@ -35,8 +35,8 @@ void sharedcipher(int mode, int argc, char **argv)
     decipherfunc_t decipher;
     u_int8_t *file, *key, *iv, c = ' ';
     char *filename, *ciphername, *keyname, *hashname;
-    int fd, length, i;
-    u_int32_t keylen, ivlen, blocklen;
+    int fd, i;
+    u_int32_t length, keylen, ivlen, blocklen;
     char default_hash[] = "ripemd160";
 
     fd = -1;

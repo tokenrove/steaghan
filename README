@@ -1,4 +1,14 @@
 
+alpha one notes
+---------------
+This is steaghan version alpha one. See the notes for alpha zero below,
+they still largely apply. Many bugs have been fixed, and lots of useful
+features have been added, making steaghan far more usable. Expect a
+similarly huge jump to alpha two.
+
+alpha zero notes
+----------------
+
 This is steaghan version alpha zero. It is an alpha release, and is
 yet ready for public consumption - think of this as a preview.  There
 are no checks to determine whether the values one specifies nor the
@@ -6,6 +16,7 @@ files one provides are sane, and so improper use can lead to data
 loss. (Most notably, in the current version, avoid using
 wrapper/wav.so with large files, or with prpg/composite.so, as I have
 experienced data loss when using the two together)
+
 
 ``Documentation'': (see also steaghan(1))
 wrapper modules ---> allow steaghan to work with various file formats.
@@ -25,16 +36,19 @@ prpg modules ---> the core of steaghan, these modules decide how to spread
                                is very effective for pixmaps and similar,
                                but can result in data loss for other formats.
 file modules ---> 
-                  seek ->
-                  mmap ->
+                  seek -> no reason to use this unless mmap is broken on your
+			  system.
+                  mmap -> the obvious choice, much faster than seek.
 hash modules --->
-                  md4 ->
-                  md5 ->
-                  ripemd160 ->
+                  md4 -> considered insecure
+                  md5 -> considered less than completely secure
+                  ripemd160 -> reasonably secure
 cipher modules --->
-                  null ->
-                  rot13 ->
-                  rc5 ->
+                  null -> obviously insecure
+                  rot13 -> obviously insecure
+                  rc5 -> reasonably secure, but only supports ECB right now,
+                         and is fairly inconvenient to use. (plus the
+			 passphrase to key transform code is nonexistant)
 
 Acknowledgements:
 
