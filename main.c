@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Tue Jan 25 14:02:14 2000 by tek@wiw.org
- * Revised: Tue Jan 25 14:02:14 2000 (pending)
+ * Revised: Wed Mar  8 15:10:41 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -14,12 +14,6 @@
 #include <stdlib.h>
 
 #include "steaghan.h"
-
-extern void inject(moduleinfo_t prpg, moduleinfo_t wrapper, u_int8_t *secdata,
-                   u_int32_t seclen);
-extern u_int8_t *extract(moduleinfo_t prpg, moduleinfo_t wrapper,
-                         u_int32_t *seclen);
-extern int loadmod(moduleinfo_t *mip, char *modpath);
 
 /* bomb callback */
 void bomb(void) { exit(1); }
@@ -46,9 +40,13 @@ int main(int argc, char **argv)
     }
 
     loadmod(&prpg, argv[1]);
+    describemod(&prpg);
     loadmod(&hash, argv[2]);
+    describemod(&hash);
     loadmod(&wrapper, argv[3]);
+    describemod(&wrapper);
     loadmod(&filemod, argv[4]);
+    describemod(&filemod);
     key = (unsigned char *)argv[5]; /* FIXME */
     keylen = strlen(argv[5]);
     wrapper_filename = argv[6];

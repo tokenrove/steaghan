@@ -49,7 +49,7 @@ moduleinfo_t moduleinfo(void);
 
 typedef struct {
     const char *name, *description;
-    enum { prpgmod, hashmod, wrappermod } moduletype;
+    enum { prpgmod, hashmod, wrappermod, filemod } moduletype;
     void *dlhandle;
 } moduleinfo_t;
 
@@ -67,10 +67,15 @@ void hash(u_int8_t *data, u_int32_t length, u_int8_t *hash);
 
 --
 wrapper modules:
-void *wrapinit(char *filename);
+void *wrapinit(file_t *file);
 u_int32_t wraplen(void *p);
 bool wrapread(void *p, u_int32_t bit);
 void wrapwrite(void *p, u_int32_t bit, bool value);
 void wrapclose(void *p);
+
+--
+file modules:
+file_t *fileinit(char *filename);
+void fileclose(file_t *file);
 
 --
