@@ -12,7 +12,13 @@ TESTS=verify-test-vectors
 
 default: $(TESTS)
 
+ifeq ($(HAVE_DLSYM), yes)
+UTILOPTS = '-d $(TOPDIR)'
+else
+UTILOPTS =
+endif
+
 verify-test-vectors:
-	. ./verify-test-vectors.sh
+	UTILOPTS=$(UTILOPTS) . ./verify-test-vectors.sh
 
 # EOF Makefile#

@@ -11,7 +11,7 @@
 
 for i in test-vector.*.in
 do
-    hashval=`../../utils/hash \`echo $i | sed -e 's/^test-vector\.\([A-z0-9]*\)\..*$/\1/'\` $i | awk '{print $1}'`
+    hashval=`../../utils/hash -h \`echo $i | sed -e 's/^test-vector\.\([A-z0-9]*\)\..*$/\1/'\` $i $UTILOPTS | awk '{print $1}'`
     echo $hashval | cmp - `echo $i | sed -e 's/^\(.*\)in$/\1out/'`
 done
 

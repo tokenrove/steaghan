@@ -22,8 +22,14 @@
 
 void usage(int mode)
 {
-    fprintf(stderr, "usage: %s -c <cipher module> [-k <key>] [-h <hash>] [file]\n",
+    fprintf(stderr, "usage: %s -c <cipher module> [-k <key>] [-h <hash>]",
             (mode == 0)?"encipher":"decipher");
+#ifdef HAVE_DLSYM
+    fprintf(stderr, " [-d <top dir>] [file]\n");
+#else
+    fprintf(stderr, " [file]\n");
+    fprintf(stderr, "       %s -l\n", (mode == 0)?"encipher":"decipher");
+#endif
     exit(EXIT_FAILURE);
 }
 
@@ -56,6 +62,15 @@ void sharedcipher(int mode, int argc, char **argv)
             } else if(argv[i][1] == 'h') {
                 if(i+1 < argc) hashname = argv[++i];
                 else usage(mode);
+#ifdef HAVE_DLSYM
+            } else if(argv[i][1] == 'd') {
+                if(i+1 < argc) topdir = argv[++i];
+                else usage(mode);
+#else
+            } else if(argv[i][1] == 'l') {
+                listmods();
+                exit(EXIT_SUCCESS);
+#endif
             }
         } else if(filename == NULL) filename = argv[i];
         else usage(mode);
