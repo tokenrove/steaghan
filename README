@@ -1,10 +1,11 @@
 
 This is steaghan version alpha zero. It is an alpha release, and is
-yet ready for public consumption - think of this as a preview.
-There are no checks to determine whether the values one specifies
-nor the files one provides are sane, and so improper use can lead
-to data loss. (Most notably, in the current version, avoid using
-wrapper/wav.so, and, to a lesser extent, prpg/composite.so)
+yet ready for public consumption - think of this as a preview.  There
+are no checks to determine whether the values one specifies nor the
+files one provides are sane, and so improper use can lead to data
+loss. (Most notably, in the current version, avoid using
+wrapper/wav.so with large files, or with prpg/composite.so, as I have
+experienced data loss when using the two together)
 
 ``Documentation'':
  wrapper modules ---> allow steaghan to work with various file formats.

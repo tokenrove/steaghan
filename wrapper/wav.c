@@ -81,9 +81,9 @@ void *wrapinit(char *filename)
     fread(buffer, 4, 1, p->handle); buffer[4] = 0;
     if(strcmp(buffer, "data")) return NULL; /* see above FIXME */
 
-    p->nsamples = getledword(p->handle)/(p->bps/8);
+    p->nsamples = (getledword(p->handle)/(p->bps/8))-1;
     p->dataoffset = ftell(p->handle);
-    
+
     return (void *)p;
 }
 
