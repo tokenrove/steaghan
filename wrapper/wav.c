@@ -79,7 +79,7 @@ void *wrapinit(char *filename)
     p->bps = getleword(p->handle);
 
     fread(buffer, 4, 1, p->handle); buffer[4] = 0;
-    if(strcmp(buffer, "data")) return NULL; /* see abaove FIXME */
+    if(strcmp(buffer, "data")) return NULL; /* see above FIXME */
 
     p->nsamples = getledword(p->handle)/(p->bps/8);
     p->dataoffset = ftell(p->handle);
@@ -99,7 +99,7 @@ u_int8_t wrapread(void *p_, u_int32_t pos)
     if(p->bps == 8)
         fseek(p->handle, pos+p->dataoffset, SEEK_SET);
     else if(p->bps == 16)
-        fseek(p->handle, pos*(p->bps/8)+p->dataoffset+1, SEEK_SET);
+        fseek(p->handle, (2*pos)+p->dataoffset, SEEK_SET);
     return fgetc(p->handle)&1;
 }
 
@@ -111,7 +111,7 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     if(p->bps == 8) {
         fseek(p->handle, pos+p->dataoffset, SEEK_SET);
     } else if(p->bps == 16) {
-        fseek(p->handle, pos*(p->bps/8)+p->dataoffset+1, SEEK_SET);
+        fseek(p->handle, (2*pos)+p->dataoffset, SEEK_SET);
     }
 
     x = fgetc(p->handle)&0xFE;
@@ -132,8 +132,5 @@ void wrapclose(void *p_)
     
     return;
 }
-
-/* EOF raw.c */
-
 
 /* EOF wav.c */

@@ -89,19 +89,19 @@ u_int32_t permugen(void *p_)
     memcpy(p->catspace, p->key, p->keylen);
 
     memcpy(p->catspace+p->keylen, &X, sizeof(u_int32_t));
-    (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+    (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
     Y = (Y + p->hashbuf[0]) % p->y;
 
     memcpy(p->catspace+p->keylen, &Y, sizeof(u_int32_t));
-    (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+    (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
     X = (X + p->hashbuf[1]) % p->x;
 
     memcpy(p->catspace+p->keylen, &X, sizeof(u_int32_t));
-    (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+    (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
     Y = (Y + p->hashbuf[2]) % p->y;
 
     memcpy(p->catspace+p->keylen, &Y, sizeof(u_int32_t));
-    (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+    (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
     X = (X + p->hashbuf[3]) % p->x;
 
     p->i++;

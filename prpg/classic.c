@@ -72,7 +72,7 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
     h = (u_int32_t *)malloc(hashlen/8);
     assert(h != NULL);
     
-    (*hash)(catspace, catlen, h);
+    (*hash)(catspace, catlen, (u_int8_t *)h);
     hcount = hashlen/32;
 
     /* FIXME: this shouldn't use RAND_MAX, this shouldn't assume h is at
@@ -90,9 +90,8 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
             hpermute++;
             hcount--;
         } else {
-            free(h);
             memcpy(catspace+keylen, &hpermute, sizeof(u_int32_t));
-            (*hash)(catspace, catlen, h);
+            (*hash)(catspace, catlen, (u_int8_t *)h);
             hcount = hashlen/32;
         }
     }

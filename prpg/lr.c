@@ -86,22 +86,22 @@ u_int32_t permugen(void *p_)
 
         memcpy(p->catspace+p->keylen, &X+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
         Y = Y ^ (p->hashbuf[0]&((p->nbits+1)/2));
 
         memcpy(p->catspace+p->keylen, &Y+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
         X = X ^ (p->hashbuf[1]&((p->nbits+1)/2));
 
         memcpy(p->catspace+p->keylen, &X+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
         Y = Y ^ (p->hashbuf[2]&((p->nbits+1)/2));
 
         memcpy(p->catspace+p->keylen, &Y+sizeof(u_int32_t)-(p->nbits/2+7)/8,
                (p->nbits/2+7)/8);
-        (*p->hash)(p->catspace, p->catlen, p->hashbuf);
+        (*p->hash)(p->catspace, p->catlen, (u_int8_t *)p->hashbuf);
         X = X ^ (p->hashbuf[3]&((p->nbits+1)/2));
 
         ret = X|(Y<<((p->nbits+1)/2));
