@@ -1,7 +1,7 @@
 /* 
  * mods.c
  * Created: Tue Jan 25 12:43:43 2000 by tek@wiw.org
- * Revised: Wed Mar  8 15:10:08 2000 by tek@wiw.org
+ * Revised: Thu Mar  9 07:44:23 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -84,7 +84,7 @@ int loadmod(moduleinfo_t *mip, char *modpath)
         strcat(path, prefixen[i]);
         strcat(path, modpath);
         strcat(path, STEGMODS_SUFFIX);
-        
+
         dlhandle = dlopen(path, RTLD_NOW);
         if(dlhandle != NULL) {
             *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
@@ -98,13 +98,14 @@ int loadmod(moduleinfo_t *mip, char *modpath)
 
 void describemod(moduleinfo_t *mip)
 {
-    printf("steaghan: Module ``%s'' [%s], is ", mip->name, mip->description);
-    if(mip->moduletype == prpgmod) printf("a PRPG");
-    else if(mip->moduletype == hashmod) printf("a hash");
-    else if(mip->moduletype == wrappermod) printf("a wrapper");
-    else if(mip->moduletype == filemod) printf("a file");
-    else printf("an unknown");
-    printf(" module.\n");
+    fprintf(stderr, "steaghan: Module ``%s'' [%s], is ", mip->name,
+            mip->description);
+    if(mip->moduletype == prpgmod) fprintf(stderr, "a PRPG");
+    else if(mip->moduletype == hashmod) fprintf(stderr, "a hash");
+    else if(mip->moduletype == wrappermod) fprintf(stderr, "a wrapper");
+    else if(mip->moduletype == filemod) fprintf(stderr, "a file");
+    else fprintf(stderr, "an unknown");
+    fprintf(stderr, " module.\n");
     return;
 }
 

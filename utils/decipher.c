@@ -1,7 +1,7 @@
 /* 
  * decipher.c
  * Created: Thu Mar  9 05:09:29 2000 by tek@wiw.org
- * Revised: Thu Mar  9 05:09:29 2000 (pending)
+ * Revised: Thu Mar  9 07:23:22 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -30,11 +30,11 @@ int main(int argc, char **argv)
     int fd, length;
     u_int32_t keylen, ivlen, blocklen;
 
-    if(argc < 4) {
-        fprintf(stderr, "usage: decipher <cipher module> <key> <file>\n");
+    if(argc != 3 && argc != 4) {
+        fprintf(stderr, "usage: decipher <cipher module> <key> [file]\n");
         exit(EXIT_FAILURE);
     }
-    
+
     if(loadmod(&cipher, argv[1])) {
         fprintf(stderr, "Unable to load module %s\n", argv[1]);
         exit(EXIT_FAILURE);
@@ -70,25 +70,42 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    fd = open(argv[3], O_RDWR);
-    if(fd == -1) {
-        fprintf(stderr, "%s: %s", argv[3], strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+    if(argc == 4 && strcmp(argv[3], "-")) {
+        fd = open(argv[3], O_RDWR);
+        if(fd == -1) {
+            fprintf(stderr, "%s: %s", argv[3], strerror(errno));
+            exit(EXIT_FAILURE);
+        }
         
-    length = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
+        length = lseek(fd, 0, SEEK_END);
+        lseek(fd, 0, SEEK_SET);
 
-    if((length%blocklen) != 0)
-        length += (blocklen-(length%blocklen));
+        if((length%blocklen) != 0)
+            length += (blocklen-(length%blocklen));
 
-    file = (u_int8_t *)mmap(0, length, PROT_READ|PROT_WRITE, MAP_SHARED, fd,
-                            0);
-    if((void *)file == (void *)-1) {
-        exit(EXIT_FAILURE);
+        file = (u_int8_t *)mmap(0, length, PROT_READ|PROT_WRITE, MAP_SHARED,
+                                fd, 0);
+        if((void *)file == (void *)-1) {
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        file = NULL;
+        length = 0;
+
+        while(!feof(stdin)) {
+            file = (u_int8_t *)realloc(file, length+4096);
+            length += fread(file+length, 1, 4096, stdin);
+        }
     }
 
     (*decipher)(cipher.handle, file, file, length);
+
+    if(argc == 4) {
+        munmap(file, length);
+    } else {
+        fwrite(file, 1, length, stdout);
+        free(file);
+    }
 
     (*(cipherclosefunc_t)dlsym(cipher.dlhandle,
                                "cipherclose"))(cipher.handle);

@@ -1,7 +1,7 @@
 /* 
  * hash.c
  * Created: Wed Mar  8 14:14:43 2000 by tek@wiw.org
- * Revised: Wed Mar  8 15:05:03 2000 by tek@wiw.org
+ * Revised: Thu Mar  9 06:53:21 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -51,19 +51,40 @@ int main(int argc, char **argv)
 
     hashfunc = (hashfunc_t)dlsym(hash.dlhandle, "hash");
 
-    for(i = 2; i < argc; i++) {
-        fd = open(argv[i], O_RDONLY);
-        if(fd == -1) {
-            fprintf(stderr, "%s: %s", argv[i], strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-        
-        length = lseek(fd, 0, SEEK_END);
-        lseek(fd, 0, SEEK_SET);
+    if(argc == 2) {
+        file = NULL;
+        length = 0;
 
-        file = (u_int8_t *)mmap(0, length, PROT_READ, MAP_PRIVATE, fd, 0);
-        if((void *)file == (void *)-1) {
-            exit(EXIT_FAILURE);
+        while(!feof(stdin)) {
+            file = (u_int8_t *)realloc(file, length+4096);
+            length += fread(file+length, 1, 4096, stdin);
+        }
+    }
+    
+    for(i = 2; i < argc; i++) {
+        if(strcmp(argv[i], "-")) {
+            fd = open(argv[i], O_RDONLY);
+            if(fd == -1) {
+                fprintf(stderr, "%s: %s", argv[i], strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+        
+            length = lseek(fd, 0, SEEK_END);
+            lseek(fd, 0, SEEK_SET);
+
+            file = (u_int8_t *)mmap(0, length, PROT_READ, MAP_PRIVATE, fd, 0);
+            if((void *)file == (void *)-1) {
+                fprintf(stderr, "%s: %s", argv[i], strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            file = NULL;
+            length = 0;
+
+            while(!feof(stdin)) {
+                file = (u_int8_t *)realloc(file, length+4096);
+                length += fread(file+length, 1, 4096, stdin);
+            }
         }
     
         memset(mogo, 0, hashlen/8);
@@ -73,6 +94,12 @@ int main(int argc, char **argv)
             printf("%02x", mogo[j]);
         }
         printf("  %s\n", argv[i]);
+
+        if(strcmp(argv[i], "-")) {
+            munmap(file, length);
+        } else {
+            free(file);
+        }
     }
 
     free(mogo);

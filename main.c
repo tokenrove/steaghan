@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Tue Jan 25 14:02:14 2000 by tek@wiw.org
- * Revised: Wed Mar  8 15:10:41 2000 by tek@wiw.org
+ * Revised: Thu Mar  9 08:15:04 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -17,22 +17,20 @@
 
 #include "steaghan.h"
 
-/* bomb callback */
-void bomb(void) { exit(1); }
-
 void usage(void) {
-    printf("steaghan [options] [--] <mode> <wrapper file> [secret file]\n");
-    printf("  where mode is i or e (``i''nject or ``e''xtract).\n");
-    printf("options: [options marked with * are mandatory]\n");
+    fprintf(stderr, "steaghan [options] [--] <mode> <wrapper file> [secret ");
+    fprintf(stderr, "file]\n");
+    fprintf(stderr, "  where mode is i or e (``i''nject or ``e''xtract).\n");
+    fprintf(stderr, "options: [options marked with * are mandatory]\n");
     
-    printf("  -p <prpg module> [defaults to classic]\n");
-    printf("  -h <hash module> [defaults to ripemd160]\n");
-    printf("  -f <file module> [defaults to mmap]\n");
-    printf("* -w <wrapper module>\n");
-    printf("* -k <key file>\n");
+    fprintf(stderr, "  -p <prpg module> [defaults to classic]\n");
+    fprintf(stderr, "  -h <hash module> [defaults to ripemd160]\n");
+    fprintf(stderr, "  -f <file module> [defaults to mmap]\n");
+    fprintf(stderr, "* -w <wrapper module>\n");
+    fprintf(stderr, "* -k <key file>\n");
 
-    printf("\nPlease see steaghan(1) for more detail.\n");
-    exit(EXIT_SUCCESS);
+    fprintf(stderr, "\nPlease see steaghan(1) for more detail.\n");
+    exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv)
@@ -95,7 +93,7 @@ int main(int argc, char **argv)
         else if(conf.secret_filename == NULL)
             conf.secret_filename = argv[i];
         else
-            usage();        
+            usage();   
     }
 
     if(conf.wrapper_filename == NULL ||
@@ -172,7 +170,7 @@ int main(int argc, char **argv)
     }
 
     if(conf.mode == 'i') {
-        printf("injecting...\n");
+        fprintf(stderr, "injecting...\n");
 
         if(conf.secret_filename != NULL && strcmp(conf.secret_filename, "-")) {
             fp = fopen(conf.secret_filename, "r");
@@ -193,13 +191,15 @@ int main(int argc, char **argv)
                 secdata = (u_int8_t *)realloc(secdata, seclen+4096);
                 seclen += fread(secdata+seclen, 1, 4096, stdin);
             }
+
+            seclen *= 8;
         }
 
         inject(conf.prpg, conf.wrapper, secdata, seclen);
 
     } else {
-        printf("extracting...\n");
-        
+        fprintf(stderr, "extracting...\n");
+
         secdata = extract(conf.prpg, conf.wrapper, &seclen);
 
         if(conf.secret_filename != NULL && strcmp(conf.secret_filename, "-")) {
