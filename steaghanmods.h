@@ -1,7 +1,7 @@
 /* 
  * steaghanmods.h
  * Created: Tue Nov 23 06:08:49 1999 by tek@wiw.org
- * Revised: Mon Mar 20 17:23:22 2000 by tek@wiw.org
+ * Revised: Mon Apr 17 12:30:40 2000 by tek@wiw.org
  * Copyright 1999 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -69,7 +69,7 @@ typedef u_int32_t (*wraplenfunc_t)(void *);
 typedef u_int8_t (*wrapreadfunc_t)(void *, u_int32_t);
 typedef void (*wrapwritefunc_t)(void *, u_int32_t, u_int8_t);
 typedef void (*wrapclosefunc_t)(void *);
-typedef u_int32_t *(*wrapgetimmobilelenfunc_t)(void *);
+typedef u_int32_t (*wrapgetimmobilelenfunc_t)(void *);
 typedef void (*wrapgetimmobilefunc_t)(void *, u_int8_t *);
 /* file modules */
 typedef void *(*fileinitfunc_t)(char *);
