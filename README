@@ -7,12 +7,12 @@ loss. (Most notably, in the current version, avoid using
 wrapper/wav.so with large files, or with prpg/composite.so, as I have
 experienced data loss when using the two together)
 
-``Documentation'':
+``Documentation'': (see also steaghan(1))
 wrapper modules ---> allow steaghan to work with various file formats.
-                      pgm -> portable graymap format
-                      ppm -> portable pixmap format
-                      wav -> microsoft wave format (riff)
-                      bmp -> microsoft bitmap format
+                     pgm -> portable graymap format
+                     ppm -> portable pixmap format
+                     wav -> microsoft wave format (riff)
+                     bmp -> microsoft bitmap format
 prpg modules ---> the core of steaghan, these modules decide how to spread
                   and mix the bits. [prpg stands for pseudorandom permutation
                                      generator, incidentally]
@@ -24,9 +24,22 @@ prpg modules ---> the core of steaghan, these modules decide how to spread
                   composite -> lr construct for composite n, this module
                                is very effective for pixmaps and similar,
                                but can result in data loss for other formats.
+file modules ---> 
+                  seek ->
+                  mmap ->
+hash modules --->
+                  md4 ->
+                  md5 ->
+                  ripemd160 ->
+cipher modules --->
+                  null ->
+                  rot13 ->
+                  rc5 ->
 
 Acknowledgements:
-  Jay Kominek, who donated feedback, ideas, and access to fast hardware.
+
+  Jay Kominek, who donated lots of feedback, ideas, and access to fast
+	hardware.
   Daniel Barnes, whose initial donation of access to fast hardware was
 	essential for this project.
   Tuomas Aura's papers, ``Practical invisibility in digital communication'',

@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Tue Jan 25 14:02:14 2000 by tek@wiw.org
- * Revised: Mon Mar 20 09:37:19 2000 by tek@wiw.org
+ * Revised: Mon Mar 20 17:16:50 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -289,8 +289,9 @@ void getkeyfromfile(steaghanconf_t *conf)
     (*(decipherfunc_t)dlsym(conf->cipher.dlhandle,
                             "decipher"))(conf->cipher.handle, conf->key,
                                          conf->key, conf->keylen);
-    if(pkcs5unpad(conf->key, conf->keylen, conf->key, &conf->keylen,
-                  conf->cipherblocklen)) {
+    if(conf->cipherblocklen > 1 && pkcs5unpad(conf->key, conf->keylen,
+                                              conf->key, &conf->keylen,
+                                              conf->cipherblocklen)) {
         fprintf(stderr, "Unpadding failed! (truncated file?)\n");
         exit(EXIT_FAILURE);
     }

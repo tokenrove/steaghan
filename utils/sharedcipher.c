@@ -1,7 +1,7 @@
 /* 
  * sharedcipher.c
  * Created: Mon Mar 20 09:38:21 2000 by tek@wiw.org
- * Revised: Mon Mar 20 16:37:48 2000 by tek@wiw.org
+ * Revised: Mon Mar 20 17:18:50 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -123,7 +123,7 @@ void sharedcipher(int mode, int argc, char **argv)
         }
 
         length = lseek(fd, 0, SEEK_END);
-        if(mode == 0) {
+        if(mode == 0 && blocklen > 1) {
             for(i = length;
                 i < length+(blocklen-(length%blocklen)); i++) {
                 write(fd, &c, 1);
@@ -131,7 +131,8 @@ void sharedcipher(int mode, int argc, char **argv)
             lseek(fd, 0, SEEK_SET);
 
             file = (u_int8_t *)mmap(0, length+(blocklen-(length%blocklen)),
-                                    PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                                    PROT_READ|PROT_WRITE, MAP_SHARED, fd,
+                                    0);
         } else {
             lseek(fd, 0, SEEK_SET);
 
@@ -157,16 +158,18 @@ void sharedcipher(int mode, int argc, char **argv)
     }
 
     if(mode == 0) {
-        pkcs5pad(file, length, file, &length, blocklen);
+        if(blocklen > 1) pkcs5pad(file, length, file, &length, blocklen);
         (*encipher)(cipher.handle, file, file, length);
     } else {
         (*decipher)(cipher.handle, file, file, length);
-        if(pkcs5unpad(file, length, file, &length, blocklen)) {
-            fprintf(stderr, "Unpadding failed! (truncated file?)\n");
-            exit(EXIT_FAILURE);
-        }
+        if(blocklen > 1) {
+            if(pkcs5unpad(file, length, file, &length, blocklen)) {
+                fprintf(stderr, "Unpadding failed! (truncated file?)\n");
+                exit(EXIT_FAILURE);
+            }
 
-        ftruncate(fd, length);
+            ftruncate(fd, length);
+        }
     }
 
     if(filename != NULL && strcmp(filename, "-")) {

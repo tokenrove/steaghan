@@ -1,7 +1,7 @@
 /* 
  * steaghanmods.h
  * Created: Tue Nov 23 06:08:49 1999 by tek@wiw.org
- * Revised: Mon Mar 20 09:26:35 2000 by tek@wiw.org
+ * Revised: Mon Mar 20 17:23:22 2000 by tek@wiw.org
  * Copyright 1999 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
