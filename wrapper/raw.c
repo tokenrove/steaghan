@@ -99,4 +99,22 @@ void wrapclose(void *p_)
     return;
 }
 
+void wrapgetimmobilelen(void *p_)
+{
+    wraphandle_t *p = (wraphandle_t *)p_;
+    return p->nbytes;
+}
+
+void wrapgetimmobile(void *p_, u_int8_t *immobile)
+{
+    wraphandle_t *p = (wraphandle_t *)p_;
+    int i;
+
+    (*p->file->read)(p->file->handle, 0, p->nbytes, (void *)immobile);
+    for(i = 0; i < p->nbytes; i++) {
+        immobile[i] &= 0xFE;
+    }
+    return;
+}
+
 /* EOF raw.c */

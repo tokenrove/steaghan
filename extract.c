@@ -23,9 +23,9 @@ u_int8_t *extract(moduleinfo_t prpg, moduleinfo_t wrapper, u_int32_t *seclen)
     u_int32_t wraplen, i, k, j;
     u_int8_t *secdata;
 
-    wraplen = (*(wraplenfunc_t)dlsym(wrapper.dlhandle, "wraplen"))(wrapper.handle);
-    wrapread = (wrapreadfunc_t)dlsym(wrapper.dlhandle, "wrapread");
-    permugen = (permugenfunc_t)dlsym(prpg.dlhandle, "permugen");
+    wraplen = (*(wraplenfunc_t)getsym(&wrapper, "wraplen"))(wrapper.handle);
+    wrapread = (wrapreadfunc_t)getsym(&wrapper, "wrapread");
+    permugen = (permugenfunc_t)getsym(&prpg, "permugen");
 
     *seclen = 0;
     for(i = 0; i < sizeof(u_int32_t)*8; i++) {

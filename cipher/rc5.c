@@ -8,7 +8,6 @@
  * 
  */
 
-#include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -32,60 +31,87 @@ typedef struct {
 } cipherhandle_t;
 
 /* internal functions */
-void encipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B);
-void decipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B);
+void rc5_encipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B);
+void rc5_decipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B);
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t rc5_moduleinfo(void);
+u_int32_t rc5_cipherkeylen(void);
+u_int32_t rc5_cipherivlen(void);
+u_int32_t rc5_cipherblocklen(void);
+void rc5_cipherphrasetokey(char *phrase, u_int8_t *key, moduleinfo_t hash);
+void *rc5_cipherinit(u_int8_t *key, u_int8_t *iv);
+void rc5_encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len);
+void rc5_decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len);
+void rc5_cipherclose(void *p_);
+
+modulefunctable_t *rc5_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 9;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)rc5_moduleinfo;
+
+    mft->funcs[1].name = "cipherkeylen";
+    mft->funcs[1].f = (void *)rc5_cipherkeylen;
+
+    mft->funcs[2].name = "cipherivlen";
+    mft->funcs[2].f = (void *)rc5_cipherivlen;
+    
+    mft->funcs[3].name = "cipherblocklen";
+    mft->funcs[3].f = (void *)rc5_cipherblocklen;
+    
+    mft->funcs[4].name = "cipherphrasetokey";
+    mft->funcs[4].f = (void *)rc5_cipherphrasetokey;
+
+    mft->funcs[5].name = "cipherinit";
+    mft->funcs[5].f = (void *)rc5_cipherinit;
+
+    mft->funcs[6].name = "encipher";
+    mft->funcs[6].f = (void *)rc5_encipher;
+
+    mft->funcs[7].name = "decipher";
+    mft->funcs[7].f = (void *)rc5_decipher;
+
+    mft->funcs[8].name = "cipherclose";
+    mft->funcs[8].f = (void *)rc5_cipherclose;
+
+    return mft;
+}
+
+moduleinfo_t rc5_moduleinfo(void)
 {
     moduleinfo_t mi = { RC5_MODULENAME, RC5_MODULEDESC, ciphermod, 0 };
     return mi;
 }
 
-u_int32_t cipherkeylen(void)
+u_int32_t rc5_cipherkeylen(void)
 {
     return RC5_KEYLEN;
 }
 
-u_int32_t cipherivlen(void)
+u_int32_t rc5_cipherivlen(void)
 {
     return 0;
 }
 
-u_int32_t cipherblocklen(void)
+u_int32_t rc5_cipherblocklen(void)
 {
     return RC5_WORDLEN*2;
 }
 
-void cipherphrasetokey(char *phrase, u_int8_t *key, moduleinfo_t hash)
+void rc5_cipherphrasetokey(char *phrase, u_int8_t *key, moduleinfo_t hash)
 {
-    hashfunc_t hashfunc = (hashfunc_t)dlsym(hash.dlhandle, "hash");
-    u_int32_t hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))(),
-        iterlen = 0;
-    u_int8_t *buffer;
-
-    buffer = (u_int8_t *)malloc(hashlen/8);
-
-    (*hashfunc)((u_int8_t *)phrase, strlen(phrase), buffer);
-    if(hashlen/8 <= RC5_KEYLEN) {
-        memmove(key, buffer, hashlen/8);
-        iterlen += hashlen/8;
-        while(iterlen < RC5_KEYLEN) {
-            (*hashfunc)(buffer, hashlen/8, buffer);
-            memmove(key+iterlen, buffer, hashlen/8);
-            iterlen += hashlen/8;
-        }
-        (*hashfunc)(buffer, hashlen/8, buffer);
-        memmove(key+iterlen-hashlen/8, buffer, iterlen%RC5_KEYLEN);
-
-    } else {
-        memmove(key, buffer, RC5_KEYLEN);
-    }
-    free(buffer);
-    
+    standardphrasetokey(phrase, key, RC5_KEYLEN, hash);
     return;
 }
 
-void *cipherinit(u_int8_t *key, u_int8_t *iv)
+void *rc5_cipherinit(u_int8_t *key, u_int8_t *iv)
 {
     cipherhandle_t *p;
     u_int32_t i, j, c, s, t, A, B, L[(RC5_WORDLEN+RC5_KEYLEN-1)/RC5_WORDLEN];
@@ -121,7 +147,7 @@ void *cipherinit(u_int8_t *key, u_int8_t *iv)
     return (void *)p;
 }
 
-void encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
+void rc5_encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 {
     cipherhandle_t *p = (cipherhandle_t *)p_;
 #ifndef LITTLE_ENDIAN
@@ -133,12 +159,12 @@ void encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 #ifdef LITTLE_ENDIAN
         ((u_int32_t *)out)[2*i] = ((u_int32_t *)in)[2*i];
         ((u_int32_t *)out)[2*i+1] = ((u_int32_t *)in)[2*i+1];
-        encipher_internal(p->K, (u_int32_t *)(out+2*i*4),
-                          (u_int32_t *)(out+(2*i+1)*4));
+        rc5_encipher_internal(p->K, (u_int32_t *)(out+2*i*4),
+                              (u_int32_t *)(out+(2*i+1)*4));
 #else
         A=in[8*i];A|=in[8*i+1]<<8;A|=in[8*i+2]<<16;A|=in[8*i+3]<<24;
         B=in[8*i+4];B|=in[8*i+5]<<8;B|=in[8*i+6]<<16;B|=in[8*i+7]<<24;
-        encipher_internal(p->K, &A, &B);
+        rc5_encipher_internal(p->K, &A, &B);
         out[8*i]=A;out[8*i+1]=A>>8;out[8*i+2]=A>>16;out[8*i+3]=A>>24;
         out[8*i+4]=B;out[8*i+5]=B>>8;out[8*i+6]=B>>16;out[8*i+7]=B>>24;
 #endif
@@ -146,7 +172,7 @@ void encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
     return;
 }
 
-void decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
+void rc5_decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 {
     cipherhandle_t *p = (cipherhandle_t *)p_;
 #ifndef LITTLE_ENDIAN
@@ -158,12 +184,12 @@ void decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 #ifdef LITTLE_ENDIAN
         ((u_int32_t *)out)[2*i] = ((u_int32_t *)in)[2*i];
         ((u_int32_t *)out)[2*i+1] = ((u_int32_t *)in)[2*i+1];
-        decipher_internal(p->K, (u_int32_t *)(out+2*i*4),
-                          (u_int32_t *)(out+(2*i+1)*4));
+        rc5_decipher_internal(p->K, (u_int32_t *)(out+2*i*4),
+                              (u_int32_t *)(out+(2*i+1)*4));
 #else
         A=in[8*i];A|=in[8*i+1]<<8;A|=in[8*i+2]<<16;A|=in[8*i+3]<<24;
         B=in[8*i+4];B|=in[8*i+5]<<8;B|=in[8*i+6]<<16;B|=in[8*i+7]<<24;
-        decipher_internal(p->K, &A, &B);
+        rc5_decipher_internal(p->K, &A, &B);
         out[8*i]=A;out[8*i+1]=A>>8;out[8*i+2]=A>>16;out[8*i+3]=A>>24;
         out[8*i+4]=B;out[8*i+5]=B>>8;out[8*i+6]=B>>16;out[8*i+7]=B>>24;
 #endif
@@ -171,7 +197,7 @@ void decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
     return;
 }
 
-void cipherclose(void *p_)
+void rc5_cipherclose(void *p_)
 {
     cipherhandle_t *p = (cipherhandle_t *)p_;
 
@@ -182,7 +208,7 @@ void cipherclose(void *p_)
     return;
 }
 
-void encipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B)
+void rc5_encipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B)
 {
     int i;
     *A += K[0]; *B += K[1];
@@ -191,7 +217,7 @@ void encipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B)
     }
 }
 
-void decipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B)
+void rc5_decipher_internal(u_int32_t *K, u_int32_t *A, u_int32_t *B)
 {
     int i;
     for(i = RC5_NROUNDS; i >= 1; i--) {

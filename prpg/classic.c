@@ -6,7 +6,6 @@
  * 
  */
 
-#include <dlfcn.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -23,7 +22,38 @@ typedef struct {
     u_int32_t hashlen;
 } permuhandle_t;
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t classic_moduleinfo(void);
+void *classic_permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
+                          moduleinfo_t hash);
+u_int32_t classic_permugen(void *p_);
+void classic_permuclose(void *p_);
+
+modulefunctable_t *classic_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 4;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)classic_moduleinfo;
+
+    mft->funcs[1].name = "permuinit";
+    mft->funcs[1].f = (void *)classic_permuinit;
+
+    mft->funcs[2].name = "permugen";
+    mft->funcs[2].f = (void *)classic_permugen;
+
+    mft->funcs[3].name = "permuclose";
+    mft->funcs[3].f = (void *)classic_permuclose;
+
+    return mft;
+}
+
+moduleinfo_t classic_moduleinfo(void)
 {
     moduleinfo_t mi = { CLASSIC_MODULENAME, CLASSIC_MODULEDESC, prpgmod,
                         NULL };
@@ -32,8 +62,8 @@ moduleinfo_t moduleinfo(void)
 
 /*
  */
-void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
-                moduleinfo_t hash)
+void *classic_permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
+                        moduleinfo_t hash)
 {
     permuhandle_t *p;
     int i, j;
@@ -55,8 +85,8 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
     }
 
     if(hash.moduletype != hashmod) return NULL;
-    p->hash = (hashfunc_t)dlsym(hash.dlhandle, "hash");
-    p->hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
+    p->hash = (hashfunc_t)getsym(&hash, "hash");
+    p->hashlen = (*(hashlenfunc_t)getsym(&hash, "hashlen"))();
 
     hpermute = 0;
     catlen = keylen+sizeof(u_int32_t);
@@ -97,7 +127,7 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
     return (void *)p;
 }
 
-u_int32_t permugen(void *p_)
+u_int32_t classic_permugen(void *p_)
 {
     permuhandle_t *p = p_;
     
@@ -106,7 +136,7 @@ u_int32_t permugen(void *p_)
     return ret;
 }
 
-void permuclose(void *p_)
+void classic_permuclose(void *p_)
 {
     permuhandle_t *p = p_;
 

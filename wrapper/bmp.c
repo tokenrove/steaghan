@@ -109,4 +109,26 @@ void wrapclose(void *p_)
     return;
 }
 
+u_int32_t wrapgetimmobilelen(void *p_)
+{
+    wraphandle_t *p = (wraphandle_t *)p_;
+    return p->w*p->h*(p->bpp/8)+p->dataoffset;    
+}
+
+void wrapgetimmobile(void *p_, u_int8_t *immobile)
+{
+    wraphandle_t *p = (wraphandle_t *)p_;
+    int i;
+
+    (*p->file->read)(p->file->handle, 0, p->dataoffset, (void *)immobile);
+
+    (*p->file->read)(p->file->handle, p->dataoffset, p->w*p->h*(p->bpp/8),
+                     (void *)immobile+p->dataoffset);
+    for(i = p->dataoffset; i < p->w*p->h*(p->bpp/8); i++) {
+        immobile[i] &= 0xFE;
+    }
+
+    return;
+}
+
 /* EOF bmp.c */

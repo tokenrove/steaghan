@@ -8,7 +8,6 @@
  * 
  */
 
-#include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -42,14 +41,14 @@ int main(int argc, char **argv)
         fprintf(stderr, "%s is not a hash module!\n", argv[1]);
         exit(EXIT_FAILURE);
     }
-    hashlen=(*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
+    hashlen=(*(hashlenfunc_t)getsym(&hash, "hashlen"))();
     mogo = (u_int8_t *)malloc(hashlen/8);
     if(mogo == NULL) {
         fprintf(stderr, "Out of memory\n");
         exit(EXIT_FAILURE);
     }
 
-    hashfunc = (hashfunc_t)dlsym(hash.dlhandle, "hash");
+    hashfunc = (hashfunc_t)getsym(&hash, "hash");
 
     if(argc == 2) {
         file = NULL;

@@ -21,7 +21,7 @@ typedef struct {
         *cipher_modname;
     moduleinfo_t prpg, hash, wrapper, filemod, cipher;
     file_t *file;
-    char mode;
+    char mode, hashimmobile;
 } steaghanconf_t;
 
 extern void inject(moduleinfo_t prpg, moduleinfo_t wrapper, u_int8_t *secdata,
@@ -29,17 +29,17 @@ extern void inject(moduleinfo_t prpg, moduleinfo_t wrapper, u_int8_t *secdata,
 extern u_int8_t *extract(moduleinfo_t prpg, moduleinfo_t wrapper,
                          u_int32_t *seclen);
 
+/* system specific helpers (system.c) */
 extern void getpassphrase(char **passphrase);
 extern void randominit(void);
 extern u_int8_t randombyte(void);
 
-extern int loadmod(moduleinfo_t *mip, char *modpath);
-extern void describemod(moduleinfo_t *mip);
-
+/* statusbar.c (really a progress meter...) */
 extern void statusbar_init(int total_);
 extern void statusbar_update(int increment);
 extern void statusbar_close(void);
 
+/* pkcs5pad.c */
 extern void pkcs5pad(u_int8_t *in, u_int32_t inlen, u_int8_t *out,
                      u_int32_t *outlen, u_int8_t blocklen);
 extern int pkcs5unpad(u_int8_t *in, u_int32_t inlen, u_int8_t *out,

@@ -7,6 +7,7 @@
  */
 
 #include <endian.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "steaghanmods.h"
@@ -56,23 +57,45 @@ static u_int32_t md5_s[MD5_SSIZE] = {
     6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
 };
 
-moduleinfo_t moduleinfo(void);
-void hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
-u_int32_t hashlen(void);
-void hash_internal(u_int32_t *X, u_int32_t *H);
+moduleinfo_t md5_moduleinfo(void);
+void md5_hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
+u_int32_t md5_hashlen(void);
+void md5_hash_internal(u_int32_t *X, u_int32_t *H);
 
-moduleinfo_t moduleinfo(void)
+modulefunctable_t *md5_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 3;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)md5_moduleinfo;
+
+    mft->funcs[1].name = "hash";
+    mft->funcs[1].f = (void *)md5_hash;
+
+    mft->funcs[2].name = "hashlen";
+    mft->funcs[2].f = (void *)md5_hashlen;
+
+    return mft;
+}
+
+moduleinfo_t md5_moduleinfo(void)
 {
     moduleinfo_t mi = { MD5_MODULENAME, MD5_MODULEDESC, hashmod, 0 };
     return mi;
 }
 
-u_int32_t hashlen(void)
+u_int32_t md5_hashlen(void)
 {
     return MD5_HASHLEN;
 }
 
-void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
+void md5_hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
     u_int32_t X[16], H[MD5_IVSIZE];
     u_int32_t i, j, k;
@@ -84,7 +107,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
             for(X[j] = 0, k = 0; k < 4; k++)
                 X[j] |= d[(16*i+j)*sizeof(u_int32_t)+(3-k)]<<(8*(3-k));
 
-        hash_internal(X, H);
+        md5_hash_internal(X, H);
     }
 
     memset(X, 0, sizeof(u_int32_t)*16);
@@ -97,7 +120,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 
     X[j] |= (1<<7)<<(8*(i%4));
     if((signed)(MD5_PADMULTIPLE-(((len+1)%MD5_PADMULTIPLE)+64)) < 0) {
-        hash_internal(X, H);
+        md5_hash_internal(X, H);
         memset(X, 0, sizeof(u_int32_t)*16);
     }
     j = 14;
@@ -106,7 +129,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
         X[j+(i/32)] |= ((len&1)<<(i%32)); len>>=1;
     }
 
-    hash_internal(X, H);
+    md5_hash_internal(X, H);
 
 #ifdef LITTLE_ENDIAN
     memcpy(out, H, MD5_IVSIZE*sizeof(u_int32_t));
@@ -122,7 +145,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
     return;
 }
 
-void hash_internal(u_int32_t *X, u_int32_t *H)
+void md5_hash_internal(u_int32_t *X, u_int32_t *H)
 {
     u_int32_t A, B, C, D, j, t;
 

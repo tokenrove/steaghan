@@ -53,6 +53,11 @@ in one run.
 Cipher with which to decrypt the key file. [defaults to null] If a cipher
 other than null is specified, the user will be prompted to enter a passphrase
 on stdin. The default is not safe, but allows pipelining and such.
+.TP
+\fB\-hi\fR
+Hash the key against the ``immobile'' bits of the wrapper. CAVEAT: While this
+allows one to use the same key for multiple wrappers, it greatly increases
+the ease with which an active attacker can corrupt the message.
 .PP
 Note that modules can be specified by their ``short'' name,
 e.g. classic for (STEAGHAN_TOP_DIR)/prpg/classic.so, if they reside in

@@ -1,5 +1,4 @@
 MODS=lr.so composite.so classic.so
-
-default: $(MODS)
+LIB=libsteaghan_prpg.a
 
 include ../Rules.make

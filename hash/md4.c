@@ -44,23 +44,45 @@ static u_int32_t md4_s[MD4_SSIZE] = {
     3, 9, 11, 15, 3, 9, 11, 15, 3, 9, 11, 15, 3, 9, 11, 15
 };
 
-moduleinfo_t moduleinfo(void);
-void hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
-u_int32_t hashlen(void);
-void hash_internal(u_int32_t *X, u_int32_t *H);
+moduleinfo_t md4_moduleinfo(void);
+void md4_hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
+u_int32_t md4_hashlen(void);
+void md4_hash_internal(u_int32_t *X, u_int32_t *H);
 
-moduleinfo_t moduleinfo(void)
+modulefunctable_t *md4_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 3;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)md4_moduleinfo;
+
+    mft->funcs[1].name = "hash";
+    mft->funcs[1].f = (void *)md4_hash;
+
+    mft->funcs[2].name = "hashlen";
+    mft->funcs[2].f = (void *)md4_hashlen;
+
+    return mft;
+}
+
+moduleinfo_t md4_moduleinfo(void)
 {
     moduleinfo_t mi = { MD4_MODULENAME, MD4_MODULEDESC, hashmod, 0 };
     return mi;
 }
 
-u_int32_t hashlen(void)
+u_int32_t md4_hashlen(void)
 {
     return MD4_HASHLEN;
 }
 
-void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
+void md4_hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
     u_int32_t X[16], H[MD4_IVSIZE];
     u_int32_t i, j, k;
@@ -72,7 +94,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
             for(X[j] = 0, k = 0; k < 4; k++)
                 X[j] |= d[(16*i+j)*sizeof(u_int32_t)+(3-k)]<<(8*(3-k));
 
-        hash_internal(X, H);
+        md4_hash_internal(X, H);
     }
 
     memset(X, 0, sizeof(u_int32_t)*16);
@@ -84,7 +106,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
     len *= 8; /* FIXME --> we need a long long */
     X[j] |= (1<<7)<<(8*(i%4));
     if((signed)(MD4_PADMULTIPLE-(((len+1)%MD4_PADMULTIPLE)+64)) < 0) {
-        hash_internal(X, H);
+        md4_hash_internal(X, H);
         memset(X, 0, sizeof(u_int32_t)*16);
     }
     j = 14;
@@ -93,7 +115,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
         X[j+(i/32)] |= ((len&1)<<(i%32)); len>>=1;
     }
 
-    hash_internal(X, H);
+    md4_hash_internal(X, H);
 
 #ifdef LITTLE_ENDIAN
     memcpy(out, H, MD4_IVSIZE*sizeof(u_int32_t));
@@ -109,7 +131,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
     return;
 }
 
-void hash_internal(u_int32_t *X, u_int32_t *H)
+void md4_hash_internal(u_int32_t *X, u_int32_t *H)
 {
     u_int32_t A, B, C, D, j, t;
     

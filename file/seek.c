@@ -22,21 +22,43 @@ typedef struct {
     FILE *handle;
 } filehandle_t;
 
-moduleinfo_t moduleinfo(void);
-file_t *fileinit(char *filename);
-void fileclose(file_t *file);
-void fileread(void *p_, u_int32_t pos, u_int32_t len, void *x);
-void filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x);
-void fileseek(void *p_, int32_t pos, filewhence_t whence);
-u_int32_t filetell(void *p_);
+moduleinfo_t seek_moduleinfo(void);
+file_t *seek_fileinit(char *filename);
+void seek_fileclose(file_t *file);
+void seek_fileread(void *p_, u_int32_t pos, u_int32_t len, void *x);
+void seek_filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x);
+void seek_fileseek(void *p_, int32_t pos, filewhence_t whence);
+u_int32_t seek_filetell(void *p_);
 
-moduleinfo_t moduleinfo(void)
+modulefunctable_t *seek_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 3;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)seek_moduleinfo;
+
+    mft->funcs[1].name = "fileinit";
+    mft->funcs[1].f = (void *)seek_fileinit;
+
+    mft->funcs[2].name = "fileclose";
+    mft->funcs[2].f = (void *)seek_fileclose;
+
+    return mft;
+}
+
+moduleinfo_t seek_moduleinfo(void)
 {
     moduleinfo_t mi = { SEEK_MODULENAME, SEEK_MODULEDESC, filemod, 0 };
     return mi;
 }
 
-file_t *fileinit(char *filename)
+file_t *seek_fileinit(char *filename)
 {
     file_t *file;
 
@@ -47,10 +69,10 @@ file_t *fileinit(char *filename)
     if(file->handle == NULL) return NULL;
 
     file->filename = filename;
-    file->read = fileread;
-    file->write = filewrite;
-    file->seek = fileseek;
-    file->tell = filetell;
+    file->read = seek_fileread;
+    file->write = seek_filewrite;
+    file->seek = seek_fileseek;
+    file->tell = seek_filetell;
     
     ((filehandle_t *)file->handle)->handle = fopen(filename, "r+");
     if(((filehandle_t *)file->handle)->handle == NULL) return NULL;
@@ -58,14 +80,14 @@ file_t *fileinit(char *filename)
     return file;
 }
 
-void fileclose(file_t *file)
+void seek_fileclose(file_t *file)
 {
     fclose(((filehandle_t *)file->handle)->handle);
     free(file->handle);
     free(file);
 }
 
-void fileread(void *p_, u_int32_t pos, u_int32_t len, void *x)
+void seek_fileread(void *p_, u_int32_t pos, u_int32_t len, void *x)
 {
     FILE *p = ((filehandle_t *)p_)->handle;
 
@@ -74,7 +96,7 @@ void fileread(void *p_, u_int32_t pos, u_int32_t len, void *x)
     return;
 }
 
-void filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x)
+void seek_filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x)
 {
     FILE *p = ((filehandle_t *)p_)->handle;
 
@@ -83,7 +105,7 @@ void filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x)
     return;
 }
 
-void fileseek(void *p_, int32_t pos, filewhence_t whence)
+void seek_fileseek(void *p_, int32_t pos, filewhence_t whence)
 {
     FILE *p = ((filehandle_t *)p_)->handle;
 
@@ -96,7 +118,7 @@ void fileseek(void *p_, int32_t pos, filewhence_t whence)
     return;
 }
 
-u_int32_t filetell(void *p_)
+u_int32_t seek_filetell(void *p_)
 {
     FILE *p = ((filehandle_t *)p_)->handle;
 

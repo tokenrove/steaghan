@@ -24,10 +24,10 @@ void inject(moduleinfo_t prpg, moduleinfo_t wrapper, u_int8_t *secdata,
     permugenfunc_t permugen;
     u_int32_t wraplen, i, k;
 
-    wraplen = (*(wraplenfunc_t)dlsym(wrapper.dlhandle, "wraplen"))(wrapper.handle);
-    wrapread = (wrapreadfunc_t)dlsym(wrapper.dlhandle, "wrapread");
-    wrapwrite = (wrapwritefunc_t)dlsym(wrapper.dlhandle, "wrapwrite");
-    permugen = (permugenfunc_t)dlsym(prpg.dlhandle, "permugen");
+    wraplen = (*(wraplenfunc_t)getsym(&wrapper, "wraplen"))(wrapper.handle);
+    wrapread = (wrapreadfunc_t)getsym(&wrapper, "wrapread");
+    wrapwrite = (wrapwritefunc_t)getsym(&wrapper, "wrapwrite");
+    permugen = (permugenfunc_t)getsym(&prpg, "permugen");
 
     statusbar_init(seclen+(sizeof(u_int32_t)*8));
     

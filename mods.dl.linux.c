@@ -25,21 +25,33 @@
 
 int loadmod(moduleinfo_t *mip, char *modpath);
 void describemod(moduleinfo_t *mip);
-void *getsym(void *dlhandle, char *sym);
+void *getsym(moduleinfo_t *mip, char *sym);
 
 int loadmod(moduleinfo_t *mip, char *modpath)
 {
     void *dlhandle;
-    char *path;
+    char *path, *buffer;
     char prefixen[5][10] = { "/hash/", "/prpg/", "/file/", "/wrapper/",
                              "/cipher/" };
     int longest_prefix = 9, nprefixen = 5, i;
 
+    buffer = (char *)malloc(strlen("moduleinfo")+1+strlen(modpath)+1+1);
+    if(buffer == NULL) return 1;
+    memset(buffer, 0, strlen("moduleinfo")+1+strlen(modpath)+1+1);
+    buffer[0] = 0;
+
+    strcat(buffer, modpath); /* FIXME */
+    strcat(buffer, "_");
+    strcat(buffer, "moduleinfo");
+    buffer[strlen(modpath)+1+strlen("moduleinfo")] = 0;
+
     dlhandle = dlopen(modpath, RTLD_NOW);
     if(dlhandle != NULL) {
-        *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-        mip->dlhandle = dlhandle;
-        return 0;
+        if(dlsym(dlhandle, buffer) != NULL) {
+            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, buffer))();
+            mip->dlhandle = dlhandle;
+            return 0;
+        }
     }
 
     path = (char *)malloc(strlen(modpath)+longest_prefix+
@@ -50,9 +62,11 @@ int loadmod(moduleinfo_t *mip, char *modpath)
     
     dlhandle = dlopen(path, RTLD_NOW);
     if(dlhandle != NULL) {
-        *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-        mip->dlhandle = dlhandle;
-        return 0;
+        if(dlsym(dlhandle, buffer) != NULL) {
+            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, buffer))();
+            mip->dlhandle = dlhandle;
+            return 0;
+        }
     }
 
     for(i = 0; i < nprefixen; i++) {
@@ -63,9 +77,11 @@ int loadmod(moduleinfo_t *mip, char *modpath)
         
         dlhandle = dlopen(path, RTLD_NOW);
         if(dlhandle != NULL) {
-            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-            mip->dlhandle = dlhandle;
-            return 0;
+            if(dlsym(dlhandle, buffer) != NULL) {
+                *mip = (*(moduleinfofunc_t)dlsym(dlhandle, buffer))();
+                mip->dlhandle = dlhandle;
+                return 0;
+            }
         }
     }
     
@@ -75,9 +91,11 @@ int loadmod(moduleinfo_t *mip, char *modpath)
     
     dlhandle = dlopen(path, RTLD_NOW);
     if(dlhandle != NULL) {
-        *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-        mip->dlhandle = dlhandle;
-        return 0;
+        if(dlsym(dlhandle, buffer) != NULL) {
+            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, buffer))();
+            mip->dlhandle = dlhandle;
+            return 0;
+        }
     }
 
     for(i = 0; i < nprefixen; i++) {
@@ -88,9 +106,11 @@ int loadmod(moduleinfo_t *mip, char *modpath)
 
         dlhandle = dlopen(path, RTLD_NOW);
         if(dlhandle != NULL) {
-            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-            mip->dlhandle = dlhandle;
-            return 0;
+            if(dlsym(dlhandle, buffer) != NULL) {
+                *mip = (*(moduleinfofunc_t)dlsym(dlhandle, buffer))();
+                mip->dlhandle = dlhandle;
+                return 0;
+            }
         }
     }
     
@@ -111,9 +131,22 @@ void describemod(moduleinfo_t *mip)
     return;
 }
 
-void *getsym(void *dlhandle, char *sym)
+void *getsym(moduleinfo_t *mip, char *sym)
 {
-    return dlsym(dlhandle, sym);
+    char *buffer;
+    void *f;
+
+    buffer = (char *)malloc(strlen(sym)+1+strlen(mip->name));
+    if(buffer == NULL) return NULL;
+    buffer[0] = 0;
+
+    strcat(buffer, mip->name);
+    strcat(buffer, "_");
+    strcat(buffer, sym);
+
+    f = dlsym(mip->dlhandle, buffer);
+    free(buffer);
+    return f;
 }
 
 /* EOF mods.c */

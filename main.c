@@ -23,6 +23,7 @@ void loadeachmodule(steaghanconf_t *conf);
 void getkeyfromfile(steaghanconf_t *conf);
 void setupwrapper(steaghanconf_t *conf);
 void setupprpg(steaghanconf_t *conf);
+void hashkeyvsimmobile(steaghanconf_t *conf);
 
 int main(int argc, char **argv)
 {
@@ -44,11 +45,17 @@ int main(int argc, char **argv)
     conf.file_modname = default_file;
     conf.cipher_modname = default_cipher;
     conf.mode = '?';
+    conf.hashimmobile = 0;
 
     dealwithargs(&conf, argv, argc);
     loadeachmodule(&conf);
     getkeyfromfile(&conf);
     setupwrapper(&conf);
+
+    if(conf.hashimmobile) {
+        hashkeyvsimmobile(&conf);
+    }
+
     setupprpg(&conf);
 
     if(conf.mode == 'i') {
@@ -95,12 +102,9 @@ int main(int argc, char **argv)
 
     free(secdata);
     
-    (*(wrapclosefunc_t)dlsym(conf.wrapper.dlhandle,
-                             "wrapclose"))(conf.wrapper.handle); 
-    (*(permuclosefunc_t)dlsym(conf.prpg.dlhandle,
-                              "permuclose"))(conf.prpg.handle);
-    (*(fileclosefunc_t)dlsym(conf.filemod.dlhandle,
-                             "fileclose"))(conf.file);
+    (*(wrapclosefunc_t)getsym(&conf.wrapper,"wrapclose"))(conf.wrapper.handle);
+    (*(permuclosefunc_t)getsym(&conf.prpg, "permuclose"))(conf.prpg.handle);
+    (*(fileclosefunc_t)getsym(&conf.filemod, "fileclose"))(conf.file);
 
     exit(EXIT_SUCCESS);
 }
@@ -115,7 +119,9 @@ void dealwithargs(steaghanconf_t *conf, char **argv, int argc)
                 if(i+1 < argc) conf->prpg_modname = argv[++i];
                 else usage();
             } else if(argv[i][1] == 'h') {
-                if(i+1 < argc) conf->hash_modname = argv[++i];
+                if(argv[i][2] == 'i') conf->hashimmobile = 1;
+                else if(!argv[i][2] && i+1 < argc)
+                    conf->hash_modname = argv[++i];
                 else usage();
             } else if(argv[i][1] == 'f') {
                 if(i+1 < argc) conf->file_modname = argv[++i];
@@ -129,6 +135,11 @@ void dealwithargs(steaghanconf_t *conf, char **argv, int argc)
             } else if(argv[i][1] == 'c') {
                 if(i+1 < argc) conf->cipher_modname = argv[++i];
                 else usage();
+#ifndef HAVE_DLSYM
+            } else if(argv[i][1] == 'l') {
+                listmods();
+                exit(EXIT_SUCCESS);
+#endif
             } else if(argv[i][1] == '-') {
                 break;
             }
@@ -165,6 +176,9 @@ void dealwithargs(steaghanconf_t *conf, char **argv, int argc)
 
 void usage(void)
 {
+#ifndef HAVE_DLSYM
+    fprintf(stderr, "steaghan -l\tlists modules available\n");
+#endif
     fprintf(stderr, "steaghan [options] [--] <mode> <wrapper file> [secret ");
     fprintf(stderr, "file]\n");
     fprintf(stderr, "  where mode is i or e (``i''nject or ``e''xtract).\n");
@@ -218,11 +232,11 @@ void getkeyfromfile(steaghanconf_t *conf)
     char *passphrase;
 
     conf->cipherkey = NULL; conf->cipheriv = NULL;
-    conf->cipherkeylen = (*(cipherkeylenfunc_t)dlsym(conf->cipher.dlhandle,
+    conf->cipherkeylen = (*(cipherkeylenfunc_t)getsym(&conf->cipher,
                                                     "cipherkeylen"))();
-    conf->cipherivlen = (*(cipherivlenfunc_t)dlsym(conf->cipher.dlhandle,
+    conf->cipherivlen = (*(cipherivlenfunc_t)getsym(&conf->cipher,
                                                   "cipherivlen"))();
-    conf->cipherblocklen = (*(cipherblocklenfunc_t)dlsym(conf->cipher.dlhandle,
+    conf->cipherblocklen = (*(cipherblocklenfunc_t)getsym(&conf->cipher,
                                                          "cipherblocklen"))();
 
     if(conf->cipherkeylen != 0) {
@@ -233,7 +247,7 @@ void getkeyfromfile(steaghanconf_t *conf)
             fprintf(stderr, "Out of memory on cipher key\n");
             exit(EXIT_FAILURE);
         }
-        (*(cipherphrasetokeyfunc_t)dlsym(conf->cipher.dlhandle,
+        (*(cipherphrasetokeyfunc_t)getsym(&conf->cipher,
                                          "cipherphrasetokey"))(passphrase,
                                                                conf->cipherkey,
                                                                conf->hash);
@@ -261,7 +275,7 @@ void getkeyfromfile(steaghanconf_t *conf)
     }
 
     conf->cipher.handle =
-        (*(cipherinitfunc_t)dlsym(conf->cipher.dlhandle,
+        (*(cipherinitfunc_t)getsym(&conf->cipher,
                                   "cipherinit"))(conf->cipherkey,
                                                  conf->cipheriv);
     if(conf->cipher.handle == NULL) {
@@ -281,7 +295,7 @@ void getkeyfromfile(steaghanconf_t *conf)
     }
     fclose(fp);
 
-    (*(decipherfunc_t)dlsym(conf->cipher.dlhandle,
+    (*(decipherfunc_t)getsym(&conf->cipher,
                             "decipher"))(conf->cipher.handle, conf->key,
                                          conf->key, conf->keylen);
     if(conf->cipherblocklen > 1 && pkcs5unpad(conf->key, conf->keylen,
@@ -291,9 +305,7 @@ void getkeyfromfile(steaghanconf_t *conf)
         exit(EXIT_FAILURE);
     }
 
-    /* FIXME: K = H(Ku o f(W)) here */
-
-    (*(cipherclosefunc_t)dlsym(conf->cipher.dlhandle,
+    (*(cipherclosefunc_t)getsym(&conf->cipher,
                                "cipherclose"))(conf->cipher.handle);
     free(conf->cipheriv);
     free(conf->cipherkey);
@@ -303,14 +315,14 @@ void getkeyfromfile(steaghanconf_t *conf)
 
 void setupwrapper(steaghanconf_t *conf)
 {
-    conf->file = (*(fileinitfunc_t)dlsym(conf->filemod.dlhandle,
+    conf->file = (*(fileinitfunc_t)getsym(&conf->filemod,
                                         "fileinit"))(conf->wrapper_filename);
     if(conf->file == NULL) {
         fprintf(stderr, "failed to open the specified wrapper file.\n");
         exit(EXIT_FAILURE);
     }
 
-    conf->wrapper.handle = (*(wrapinitfunc_t)dlsym(conf->wrapper.dlhandle,
+    conf->wrapper.handle = (*(wrapinitfunc_t)getsym(&conf->wrapper,
                                                   "wrapinit"))(conf->file);
     if(conf->wrapper.handle == NULL) {
         fprintf(stderr, "failed to setup the wrapper handle. (Is the file");
@@ -325,10 +337,10 @@ void setupprpg(steaghanconf_t *conf)
 {
     u_int32_t wraplen;
 
-    wraplen = (*(wraplenfunc_t)dlsym(conf->wrapper.dlhandle,
+    wraplen = (*(wraplenfunc_t)getsym(&conf->wrapper,
                                      "wraplen"))(conf->wrapper.handle);
 
-    conf->prpg.handle = (*(permuinitfunc_t)dlsym(conf->prpg.dlhandle,
+    conf->prpg.handle = (*(permuinitfunc_t)getsym(&conf->prpg,
                                                 "permuinit"))(wraplen,
                                                               conf->key,
                                                               conf->keylen,
@@ -339,6 +351,12 @@ void setupprpg(steaghanconf_t *conf)
         exit(EXIT_FAILURE);
     }
     
+    return;
+}
+
+void hashkeyvsimmobile(steaghanconf_t *conf)
+{
+    /* FIXME: K = H(Ku o f(W)) here */
     return;
 }
 

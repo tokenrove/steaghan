@@ -61,19 +61,42 @@ static u_int32_t ripemd160_s[2][RIPEMD160_SSIZE] = {
       8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11 }
 };
 
-moduleinfo_t moduleinfo(void);
-void hash(u_int8_t *d, u_int32_t len, u_int8_t *oout);
-u_int32_t hashlen(void);
-void hash_internal(u_int32_t *X, u_int32_t *H);
+void rmd160_hash_internal(u_int32_t *X, u_int32_t *H);
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t ripemd160_moduleinfo(void);
+u_int32_t ripemd160_hashlen(void);
+void ripemd160_hash(u_int8_t *d, u_int32_t len, u_int8_t *out);
+
+modulefunctable_t *ripemd160_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 3;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)ripemd160_moduleinfo;
+
+    mft->funcs[1].name = "hash";
+    mft->funcs[1].f = (void *)ripemd160_hash;
+
+    mft->funcs[2].name = "hashlen";
+    mft->funcs[2].f = (void *)ripemd160_hashlen;
+
+    return mft;
+}
+
+moduleinfo_t ripemd160_moduleinfo(void)
 {
     moduleinfo_t mi = { RIPEMD160_MODULENAME, RIPEMD160_MODULEDESC, hashmod,
                         0 };
     return mi;
 }
 
-u_int32_t hashlen(void)
+u_int32_t ripemd160_hashlen(void)
 {
     return RIPEMD160_HASHLEN;
 }
@@ -81,8 +104,7 @@ u_int32_t hashlen(void)
 /* s/32/sizeof(a)*8/ */
 #define RIPEMD160_ROLL(a, b) (((a) << (b))|((a) >> (32-(b))))
 
-
-void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
+void ripemd160_hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
     u_int32_t X[16], H[RIPEMD160_IVSIZE];
     u_int32_t i, j, k;
@@ -94,7 +116,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
             for(X[j] = 0, k = 0; k < 4; k++)
                 X[j] |= d[(16*i+j)*sizeof(u_int32_t)+(3-k)]<<(8*(3-k));
 
-        hash_internal(X, H);
+        rmd160_hash_internal(X, H);
     }
 
     memset(X, 0, sizeof(u_int32_t)*16);
@@ -108,7 +130,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
     X[j] |= (1<<7)<<(8*(i%4));
     if((signed)(RIPEMD160_PADMULTIPLE-
                 (((len+1)%RIPEMD160_PADMULTIPLE)+64)) < 0) {
-        hash_internal(X, H);
+        rmd160_hash_internal(X, H);
         memset(X, 0, sizeof(u_int32_t)*16);
     }
     j = 14;
@@ -117,7 +139,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
         X[j+(i/32)] |= ((len&1)<<(i%32)); len>>=1;
     }
 
-    hash_internal(X, H);
+    rmd160_hash_internal(X, H);
 
 #ifdef LITTLE_ENDIAN
     memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
@@ -133,7 +155,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
     return;
 }
 
-void hash_internal(u_int32_t *X, u_int32_t *H)
+void rmd160_hash_internal(u_int32_t *X, u_int32_t *H)
 {
     u_int32_t A[2], B[2], C[2], D[2], E[2];
     u_int32_t j, t, side;

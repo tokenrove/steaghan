@@ -1,4 +1,11 @@
 
+MAJOR FLAWS TO BE CHANGED
+
+Putting variables inside moduleinfo_t.
+Having to use modulefunctable() for systems without dl.
+mods.generic.h.
+
+
 GENERAL WISHLIST
 
 zero critial areas of memory after use...
@@ -11,13 +18,14 @@ in the future we'll have to provide: - a way to pass variable arguments
 				       complexifying module code
                                      - bignum support for things like
                                        file length and such
-                                     - a consistent API
+                                     - a consistent API (especially one
+				       which helps replace the ugly
+				       modfunctable hack)
 				     - support for paletted images
                                      - support for streams (!)
 				     - statistical analysis in tests
 				     - better error handling than assert
                                      - better error checking, too. [wrapread(handle, -1), anyone?]
-				     - some way to profile dl modules
 think about CRCs, and also storing lengths with some BER-like length
   encoding, such that we don't give out obvious knowledge of the fu.
 use the all-or-nothing transform.
@@ -40,7 +48,6 @@ wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
 wrapper/wav: only PCM support, no support for RIFFs with different chunk
              layouts, unreliable (maybe). 
 hash/md*, hash/ripemd160: some minor inefficiencies.
-cipher/rc5: only supports ECB mode
 see also all the FIXMEs in the code
 
 

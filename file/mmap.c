@@ -29,21 +29,43 @@ typedef struct {
     void *handle;
 } filehandle_t;
 
-moduleinfo_t moduleinfo(void);
-file_t *fileinit(char *filename);
-void fileclose(file_t *file);
-void fileread(void *p_, u_int32_t pos, u_int32_t len, void *x);
-void filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x);
-void fileseek(void *p_, int32_t pos, filewhence_t whence);
-u_int32_t filetell(void *p_);
+moduleinfo_t mmap_moduleinfo(void);
+file_t *mmap_fileinit(char *filename);
+void mmap_fileclose(file_t *file);
+void mmap_fileread(void *p_, u_int32_t pos, u_int32_t len, void *x);
+void mmap_filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x);
+void mmap_fileseek(void *p_, int32_t pos, filewhence_t whence);
+u_int32_t mmap_filetell(void *p_);
 
-moduleinfo_t moduleinfo(void)
+modulefunctable_t *mmap_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 3;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)mmap_moduleinfo;
+
+    mft->funcs[1].name = "fileinit";
+    mft->funcs[1].f = (void *)mmap_fileinit;
+
+    mft->funcs[2].name = "fileclose";
+    mft->funcs[2].f = (void *)mmap_fileclose;
+
+    return mft;
+}
+
+moduleinfo_t mmap_moduleinfo(void)
 {
     moduleinfo_t mi = { MMAP_MODULENAME, MMAP_MODULEDESC, filemod, 0 };
     return mi;
 }
 
-file_t *fileinit(char *filename)
+file_t *mmap_fileinit(char *filename)
 {
     file_t *file;
     filehandle_t *p;
@@ -55,10 +77,10 @@ file_t *fileinit(char *filename)
     if(file->handle == NULL) return NULL;
 
     file->filename = filename;
-    file->read = fileread;
-    file->write = filewrite;
-    file->seek = fileseek;
-    file->tell = filetell;
+    file->read = mmap_fileread;
+    file->write = mmap_filewrite;
+    file->seek = mmap_fileseek;
+    file->tell = mmap_filetell;
     
     p->fd = open(filename, O_RDWR);
     p->pos = 0;
@@ -71,7 +93,7 @@ file_t *fileinit(char *filename)
     return file;
 }
 
-void fileclose(file_t *file)
+void mmap_fileclose(file_t *file)
 {
     munmap(((filehandle_t *)file->handle)->handle,
            ((filehandle_t *)file->handle)->length);
@@ -80,7 +102,7 @@ void fileclose(file_t *file)
     free(file);
 }
 
-void fileread(void *p_, u_int32_t pos, u_int32_t len, void *x)
+void mmap_fileread(void *p_, u_int32_t pos, u_int32_t len, void *x)
 {
     void *p = ((filehandle_t *)p_)->handle;
 
@@ -90,7 +112,7 @@ void fileread(void *p_, u_int32_t pos, u_int32_t len, void *x)
     return;
 }
 
-void filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x)
+void mmap_filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x)
 {
     void *p = ((filehandle_t *)p_)->handle;
 
@@ -99,7 +121,7 @@ void filewrite(void *p_, u_int32_t pos, u_int32_t len, void *x)
     return;
 }
 
-void fileseek(void *p_, int32_t pos, filewhence_t whence)
+void mmap_fileseek(void *p_, int32_t pos, filewhence_t whence)
 {
     int32_t *p = (int32_t *)&((filehandle_t *)p_)->pos;
 
@@ -112,7 +134,7 @@ void fileseek(void *p_, int32_t pos, filewhence_t whence)
     return;
 }
 
-u_int32_t filetell(void *p_)
+u_int32_t mmap_filetell(void *p_)
 {
     return ((filehandle_t *)p_)->pos;
 }

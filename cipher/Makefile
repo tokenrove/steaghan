@@ -1,5 +1,4 @@
 MODS=rc5.so rc5-cbc.so null.so rot13.so
-
-default: $(MODS)
+LIB=libsteaghan_cipher.a
 
 include ../Rules.make

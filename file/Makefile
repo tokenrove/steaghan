@@ -1,5 +1,4 @@
 MODS=seek.so mmap.so
-
-default: $(MODS)
+LIB=libsteaghan_file.a
 
 include ../Rules.make
