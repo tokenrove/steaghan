@@ -180,7 +180,7 @@ void wav_wrapgetimmobile(void *p_, u_int8_t *immobile)
     (*p->file->read)(p->file->handle, 0, p->dataoffset, (void *)immobile);
 
     (*p->file->read)(p->file->handle, p->dataoffset, p->nsamples*(p->bps/8),
-                     (void *)immobile+p->dataoffset);
+                     (void *)(immobile+p->dataoffset));
     for(i = p->dataoffset; i < p->nsamples; i++) {
         immobile[i*(p->bps/8)] &= 0xFE;
     }

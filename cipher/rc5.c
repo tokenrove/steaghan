@@ -151,13 +151,13 @@ void *rc5_cipherinit(u_int8_t *key, u_int8_t *iv)
 void rc5_encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 {
     cipherhandle_t *p = (cipherhandle_t *)p_;
-#ifndef LITTLE_ENDIAN
+#ifndef USE_LITTLE_ENDIAN
     u_int32_t A, B;
 #endif
     int i;
 
     for(i = 0; len >= (2*RC5_WORDLEN); len -= (2*RC5_WORDLEN), i++) {
-#ifdef LITTLE_ENDIAN
+#ifdef USE_LITTLE_ENDIAN
         ((u_int32_t *)out)[2*i] = ((u_int32_t *)in)[2*i];
         ((u_int32_t *)out)[2*i+1] = ((u_int32_t *)in)[2*i+1];
         rc5_encipher_internal(p->K, (u_int32_t *)(out+2*i*4),
@@ -176,13 +176,13 @@ void rc5_encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 void rc5_decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 {
     cipherhandle_t *p = (cipherhandle_t *)p_;
-#ifndef LITTLE_ENDIAN
+#ifndef USE_LITTLE_ENDIAN
     u_int32_t A, B;
 #endif
     int i;
 
     for(i = 0; len >= (2*RC5_WORDLEN); len -= (2*RC5_WORDLEN), i++) {
-#ifdef LITTLE_ENDIAN
+#ifdef USE_LITTLE_ENDIAN
         ((u_int32_t *)out)[2*i] = ((u_int32_t *)in)[2*i];
         ((u_int32_t *)out)[2*i+1] = ((u_int32_t *)in)[2*i+1];
         rc5_decipher_internal(p->K, (u_int32_t *)(out+2*i*4),

@@ -8,7 +8,6 @@
  * 
  */
 
-#include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -78,10 +77,10 @@ void sharedcipher(int mode, int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    hashfunc = (hashfunc_t)dlsym(hash.dlhandle, "hash");
-    hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
+    hashfunc = (hashfunc_t)getsym(&hash, "hash");
+    hashlen = (*(hashlenfunc_t)getsym(&hash, "hashlen"))();
 
-    keylen=(*(cipherkeylenfunc_t)dlsym(cipher.dlhandle, "cipherkeylen"))();
+    keylen=(*(cipherkeylenfunc_t)getsym(&cipher, "cipherkeylen"))();
     key = NULL;
     if(keylen != 0) {
         key = (u_int8_t *)malloc(keylen);
@@ -98,13 +97,13 @@ void sharedcipher(int mode, int argc, char **argv)
 
             getpassphrase(&keyname);
         }
-        (*(cipherphrasetokeyfunc_t)dlsym(cipher.dlhandle,
-                                         "cipherphrasetokey"))(keyname,
-                                                               key,
-                                                               hash);
+        (*(cipherphrasetokeyfunc_t)getsym(&cipher,
+                                          "cipherphrasetokey"))(keyname,
+                                                                key,
+                                                                hash);
     }
     
-    ivlen=(*(cipherivlenfunc_t)dlsym(cipher.dlhandle, "cipherivlen"))();
+    ivlen=(*(cipherivlenfunc_t)getsym(&cipher, "cipherivlen"))();
     iv = NULL;
     if(ivlen != 0) {
         iv = (u_int8_t *)malloc(ivlen);
@@ -138,11 +137,10 @@ void sharedcipher(int mode, int argc, char **argv)
         }
     }
 
-    blocklen=(*(cipherblocklenfunc_t)dlsym(cipher.dlhandle,
-                                           "cipherblocklen"))();
+    blocklen=(*(cipherblocklenfunc_t)getsym(&cipher, "cipherblocklen"))();
 
-    encipher = (encipherfunc_t)dlsym(cipher.dlhandle, "encipher");
-    decipher = (decipherfunc_t)dlsym(cipher.dlhandle, "decipher");
+    encipher = (encipherfunc_t)getsym(&cipher, "encipher");
+    decipher = (decipherfunc_t)getsym(&cipher, "decipher");
 
     if(filename != NULL && strcmp(filename, "-")) {
         if(ivlen == 0) {
@@ -227,8 +225,8 @@ void sharedcipher(int mode, int argc, char **argv)
         file = (u_int8_t *)realloc(file, length+blocklen);
     }
 
-    cipher.handle = (*(cipherinitfunc_t)dlsym(cipher.dlhandle,
-                                              "cipherinit"))(key, iv);
+    cipher.handle = (*(cipherinitfunc_t)getsym(&cipher,
+                                               "cipherinit"))(key, iv);
     if(cipher.handle == NULL) {
         fprintf(stderr, "Failed to initialize cipher. (maybe your key is ");
         fprintf(stderr, "weak?)\n");
@@ -273,8 +271,8 @@ void sharedcipher(int mode, int argc, char **argv)
         free(file);
     }
 
-    (*(cipherclosefunc_t)dlsym(cipher.dlhandle,
-                               "cipherclose"))(cipher.handle);
+    (*(cipherclosefunc_t)getsym(&cipher,
+                                "cipherclose"))(cipher.handle);
     return;
 }
 

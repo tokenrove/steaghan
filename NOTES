@@ -48,6 +48,8 @@ wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
 wrapper/wav: only PCM support, no support for RIFFs with different chunk
              layouts, unreliable (maybe). 
 hash/md*, hash/ripemd160: some minor inefficiencies.
+In an ideal world, we would only link the utils against the libraries they
+actually need.
 see also all the FIXMEs in the code
 
 

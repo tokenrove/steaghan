@@ -16,5 +16,8 @@ $(TOPDIR)/$(LIB): $(REALMODS) $(LIBEXTRAS)
 	ar -r $(TOPDIR)/$(LIB) $^
 endif
 
+test:
+	$(MAKE) -C tests
+
 %.so: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -shared $< -o $@

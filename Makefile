@@ -28,7 +28,7 @@ default: cleanmodlist steaghan test util
 
 endif
 
-export HAVE_DLSYM CFLAGS CPPFLAGS LDFLAGS TOPDIR MODSDOTO
+export HAVE_DLSYM CFLAGS CPPFLAGS LDFLAGS TOPDIR MODSDOTO STEGLIBS
 
 STEGCFLAGS=-rdynamic
 STEGOBJS=main.o extract.o inject.o statusbar.o pkcs5pad.o system.o $(MODSDOTO)
@@ -73,14 +73,18 @@ files:
 
 test:
 	$(MAKE) -C tests
+	$(MAKE) -C hash test
+	$(MAKE) -C cipher test
+	$(MAKE) -C wrapper test
+	$(MAKE) -C prpg test
+	$(MAKE) -C file test
 
 util:
 	$(MAKE) -C utils
 
 clean:
-	rm -f `find -name "*~"` `find -name "*.o"`
+	rm -f `find . -name "*~"` `find . -name "*.o"`
 
 realclean: clean
-	rm -f `find -name "*.so"`
-	rm -f `find -name "*.a"`
-	rm -f `find -name ".modules.list"`
+	rm -f `find . -name "*.so"` `find . -name "*.a"`
+	rm -f `find . -name ".modules.list"`
