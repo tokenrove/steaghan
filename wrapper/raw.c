@@ -23,11 +23,11 @@
 #define OURCRCMAGIC 0x04C11DB7
 
 moduleinfo_t moduleinfo(void);
-void *wrapinit(char *filename);
+void *wrapinit(file_t *file);
 
 typedef struct {
     char *filename;
-    FILE *handle;
+    file_t *file;
     u_int32_t nbytes;
     u_int32_t crctable[256];
 } wraphandle_t;
@@ -38,7 +38,7 @@ moduleinfo_t moduleinfo(void)
     return mi;
 }
 
-void *wrapinit(char *filename)
+void *wrapinit(file_t *file)
 {
     wraphandle_t *p;
     int i, j;
@@ -47,12 +47,10 @@ void *wrapinit(char *filename)
     p = (wraphandle_t *)malloc(sizeof(wraphandle_t));
     if(p == NULL) return NULL;
 
-    p->filename = filename;
-    p->handle = fopen(filename, "r+");
-    if(p->handle == NULL) return NULL;
-    fseek(p->handle, 0, SEEK_END);
-    p->nbytes = ftell(p->handle);
-    fseek(p->handle, 0, SEEK_SET);
+    p->file = file;
+
+    (*p->file->seek)(p->file->handle, 0, END);
+    p->nbytes = (*p->file->tell)(p->file->handle);
 
     for(i = 0; i < 256; i++) {
         for(c = (i<<24), j = 8; j > 0; j--) {
@@ -73,21 +71,23 @@ u_int32_t wraplen(void *p_)
 u_int8_t wrapread(void *p_, u_int32_t pos)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
-    fseek(p->handle, pos, SEEK_SET);
-    return fgetc(p->handle)&1;
+    u_int8_t c;
+    
+    (*p->file->read)(p->file->handle, pos, 1, &c);
+
+    return c&1;
 }
 
 void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t x;
-
-    fseek(p->handle, pos, SEEK_SET);
-    x = fgetc(p->handle)&0xFE;
+    
+    (*p->file->read)(p->file->handle, pos, 1, &x);
+    x &= 0xFE;
     x |= value;
+    (*p->file->write)(p->file->handle, pos, 1, &x);
 
-    fseek(p->handle, -1, SEEK_CUR);
-    fputc(x, p->handle);
     return;
 }
 
@@ -95,9 +95,7 @@ void wrapclose(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
 
-    fclose(p->handle);
     free(p);
-    
     return;
 }
 

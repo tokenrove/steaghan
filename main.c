@@ -25,21 +25,22 @@ extern int loadmod(moduleinfo_t *mip, char *modpath);
 void bomb(void) { exit(1); }
 
 void usage(void) {
-    printf("steaghan <prpg> <hash> <wrapper> <key> <wrapper> <secret> <mode>\n");
+    printf("steaghan <prpg-mod> <hash-mod> <wrapper-mod> <file-mod> <key> <wrapper> <secret> <mode>\n");
     printf("  where mode is i or e (``i''nject or ``e''xtract).\n");
     return;
 }
 
 int main(int argc, char **argv)
 {
-    moduleinfo_t prpg, hash, wrapper;
+    moduleinfo_t prpg, hash, wrapper, filemod;
     hashfunc_t hashfunc;
     u_int32_t hashlen, wraplen, seclen, keylen;
     char *wrapper_filename, *secret_filename, mode;
+    file_t *file;
     u_int8_t *secdata, *key;
     FILE *fp;
 
-    if(argc < 8) {
+    if(argc < 9) {
         usage();
         exit(EXIT_FAILURE);
     }
@@ -47,22 +48,36 @@ int main(int argc, char **argv)
     loadmod(&prpg, argv[1]);
     loadmod(&hash, argv[2]);
     loadmod(&wrapper, argv[3]);
-    key = (unsigned char *)argv[4]; /* FIXME */
-    keylen = strlen(argv[4]);
-    wrapper_filename = argv[5];
-    secret_filename = argv[6];
-    mode = argv[7][0];
+    loadmod(&filemod, argv[4]);
+    key = (unsigned char *)argv[5]; /* FIXME */
+    keylen = strlen(argv[5]);
+    wrapper_filename = argv[6];
+    secret_filename = argv[7];
+    mode = argv[8][0];
+
+    file = (*(fileinitfunc_t)dlsym(filemod.dlhandle,
+                                   "fileinit"))(wrapper_filename);
+    if(file == NULL) {
+        fprintf(stderr, "failed to open the specified wrapper file.\n");
+        exit(EXIT_FAILURE);
+    }
 
     hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
     hashfunc = (hashfunc_t)dlsym(hash.dlhandle, "hash");
 
-    wrapper.handle = (*(wrapinitfunc_t)dlsym(wrapper.dlhandle, "wrapinit"))(wrapper_filename);
+    wrapper.handle = (*(wrapinitfunc_t)dlsym(wrapper.dlhandle,
+                                             "wrapinit"))(file);
     if(wrapper.handle == NULL) {
-        fprintf(stderr, "failed to setup the wrapper handle. (Is the file really the right type?)\n");
+        fprintf(stderr, "failed to setup the wrapper handle. (Is the file");
+        fprintf(stderr, " really the right type?)\n");
         exit(EXIT_FAILURE);
     }
-    wraplen = (*(wraplenfunc_t)dlsym(wrapper.dlhandle, "wraplen"))(wrapper.handle);
-    prpg.handle = (*(permuinitfunc_t)dlsym(prpg.dlhandle, "permuinit"))(wraplen, key, keylen, hashfunc, hashlen);
+    wraplen = (*(wraplenfunc_t)dlsym(wrapper.dlhandle,
+                                     "wraplen"))(wrapper.handle);
+    prpg.handle = (*(permuinitfunc_t)dlsym(prpg.dlhandle,
+                                           "permuinit"))(wraplen, key,
+                                                         keylen, hashfunc,
+                                                         hashlen);
 
     if(mode == 'i') {
         printf("injecting...\n");
@@ -93,7 +108,8 @@ int main(int argc, char **argv)
     
     (*(wrapclosefunc_t)dlsym(wrapper.dlhandle, "wrapclose"))(wrapper.handle); 
     (*(permuclosefunc_t)dlsym(prpg.dlhandle, "permuclose"))(prpg.handle);
-    
+    (*(fileclosefunc_t)dlsym(filemod.dlhandle, "fileclose"))(file);
+
     return EXIT_SUCCESS;
 }
 

@@ -8,6 +8,9 @@ in the future we'll have to provide: - a way to pass variable arguments
                                      - initialization functions for all
                                        module types [can contribute to fixing
 				       hash module inefficiencies]
+				     - error callbacks, so that the main
+				       program can deal with errors without
+				       complexifying module code
                                      - bignum support for things like
                                        file length and such
                                      - loading keys from files [including
@@ -31,9 +34,10 @@ use the all-or-nothing transform.
 BUGS, ET CETERA
 
 wrapper/pgm and wrapper/ppm: can't find P2/P3 style files with which to test!
+                             shouldn't ignore maximum intensity.
 wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
 wrapper/wav: only PCM support, no support for RIFFs with different chunk
-             layouts, unreliable! 
+             layouts, unreliable (maybe). 
 hash/md*, hash/ripemd160: some minor inefficiencies
 
 

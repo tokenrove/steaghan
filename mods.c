@@ -9,6 +9,7 @@
  */
 
 #include <dlfcn.h>
+#include <stdio.h>
 
 #include "steaghan.h"
 
@@ -25,11 +26,13 @@ int loadmod(moduleinfo_t *mip, char *modpath)
         return 1;
     }
     *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-    printf("steaghan: Module ``%s'' [%s],", mip->name, mip->description);
-    printf(" is %s module.\n",
-           ((mip->moduletype == prpgmod)?"a PRPG":
-            (mip->moduletype == hashmod)?"a hash":
-            (mip->moduletype == wrappermod)?"a wrapper":"an unknown"));
+    printf("steaghan: Module ``%s'' [%s], is ", mip->name, mip->description);
+    if(mip->moduletype == prpgmod) printf("a PRPG");
+    else if(mip->moduletype == hashmod) printf("a hash");
+    else if(mip->moduletype == wrappermod) printf("a wrapper");
+    else if(mip->moduletype == filemod) printf("a file");
+    else printf("an unknown");
+    printf(" module.\n");
     
     mip->dlhandle = dlhandle;
 

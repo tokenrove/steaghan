@@ -2,7 +2,7 @@
 export CFLAGS=-Wall -g -pedantic -ansi
 STEGOBJS=main.o mods.o extract.o inject.o
 
-default: steaghan hashes prpgs wrappers test
+default: steaghan hashes prpgs wrappers files test
 
 steaghan: $(STEGOBJS)
 	$(CC) -rdynamic $(CFLAGS) $(STEGOBJS) -o steaghan -ldl
@@ -15,6 +15,9 @@ prpgs:
 
 wrappers:
 	$(MAKE) -C wrapper 
+
+files:
+	$(MAKE) -C file
 
 test:
 	$(MAKE) -C tests

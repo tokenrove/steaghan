@@ -18,12 +18,8 @@
 #define WAV_MODULENAME "wav"
 #define WAV_MODULEDESC "Microsoft WAVE audio"
 
-moduleinfo_t moduleinfo(void);
-void *wrapinit(char *filename);
-
 typedef struct {
-    char *filename;
-    FILE *handle;
+    file_t *file;
     u_int32_t nsamples, dataoffset, freq;
     u_int16_t bps, channels;
 } wraphandle_t;
@@ -34,17 +30,9 @@ moduleinfo_t moduleinfo(void)
     return mi;
 }
 
-short getleword(FILE *fp)
-{
-    return (fgetc(fp)|(fgetc(fp)<<8));
-}
+#include "ms-shared.c"
 
-long getledword(FILE *fp)
-{
-    return (fgetc(fp)|(fgetc(fp)<<8)|(fgetc(fp)<<16)|(fgetc(fp)<<24));
-}
-
-void *wrapinit(char *filename)
+void *wrapinit(file_t *file)
 {
     wraphandle_t *p;
     char buffer[5];
@@ -52,37 +40,34 @@ void *wrapinit(char *filename)
     p = (wraphandle_t *)malloc(sizeof(wraphandle_t));
     if(p == NULL) return NULL;
 
-    p->filename = filename;
-    p->handle = fopen(filename, "r+");
-    if(p->handle == NULL) return NULL;
+    p->file = file;
 
-    fread(buffer, 4, 1, p->handle); buffer[4] = 0;
+    (*p->file->read)(p->file->handle, 0, 4, buffer); buffer[4] = 0;
     if(strcmp(buffer, "RIFF")) return NULL;
     
-    fseek(p->handle, 4, SEEK_CUR); /* file size - 8 */
-    
-    fread(buffer, 4, 1, p->handle); buffer[4] = 0;
+    (*p->file->read)(p->file->handle, 8, 4, buffer); buffer[4] = 0;
     if(strcmp(buffer, "WAVE")) return NULL;
 
-    fread(buffer, 4, 1, p->handle); buffer[4] = 0;
+    (*p->file->read)(p->file->handle, 12, 4, buffer); buffer[4] = 0;
     if(strcmp(buffer, "fmt ")) return NULL; /* FIXME: no support for
                                                non-canonical wave files */
 
-    if(getledword(p->handle) != 0x00000010) return NULL;
-    if(getleword(p->handle) != 0x0001) return NULL; /* FIXME: no
+    if(getledword(p->file) != 0x00000010) return NULL;
+    if(getleword(p->file) != 0x0001) return NULL; /* FIXME: no
                                                        non-PCM support */
 
-    p->channels = getleword(p->handle);
-    p->freq = getledword(p->handle);
-    getledword(p->handle); /* bytes/second */
-    getleword(p->handle); /* block alignment */
-    p->bps = getleword(p->handle);
+    p->channels = getleword(p->file);
+    p->freq = getledword(p->file);
+    getledword(p->file); /* bytes/second */
+    getleword(p->file); /* block alignment */
+    p->bps = getleword(p->file);
 
-    fread(buffer, 4, 1, p->handle); buffer[4] = 0;
+    (*p->file->read)(p->file->handle, (*p->file->tell)(p->file->handle),
+                     4, buffer); buffer[4] = 0;
     if(strcmp(buffer, "data")) return NULL; /* see above FIXME */
 
-    p->nsamples = (getledword(p->handle)/(p->bps/8))-1;
-    p->dataoffset = ftell(p->handle);
+    p->nsamples = (getledword(p->file)/(p->bps/8))-1;
+    p->dataoffset = (*p->file->tell)(p->file->handle);
 
     return (void *)p;
 }
@@ -95,12 +80,12 @@ u_int32_t wraplen(void *p_)
 
 u_int8_t wrapread(void *p_, u_int32_t pos)
 {
-    wraphandle_t *p = (wraphandle_t *)p_;
+    wraphandle_t *p = (wraphandle_t *)p_; u_int8_t c;
     if(p->bps == 8)
-        fseek(p->handle, pos+p->dataoffset, SEEK_SET);
+        (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &c);
     else if(p->bps == 16)
-        fseek(p->handle, (2*pos)+p->dataoffset, SEEK_SET);
-    return fgetc(p->handle)&1;
+        (*p->file->read)(p->file->handle, (2*pos)+p->dataoffset, 1, &c);
+    return c&1;
 }
 
 void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
@@ -109,17 +94,20 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     u_int8_t x;
 
     if(p->bps == 8) {
-        fseek(p->handle, pos+p->dataoffset, SEEK_SET);
+        (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &x);
     } else if(p->bps == 16) {
-        fseek(p->handle, (2*pos)+p->dataoffset, SEEK_SET);
+        (*p->file->read)(p->file->handle, (2*pos)+p->dataoffset, 1, &x);
     }
 
-    x = fgetc(p->handle)&0xFE;
+    x &= 0xFE;
     x |= value;
 
-    fseek(p->handle, -1, SEEK_CUR);
-    fputc(x, p->handle);
-    
+    if(p->bps == 8) {
+        (*p->file->write)(p->file->handle, pos+p->dataoffset, 1, &x);
+    } else if(p->bps == 16) {
+        (*p->file->write)(p->file->handle, (2*pos)+p->dataoffset, 1, &x);
+    }
+
     return;
 }
 
@@ -127,7 +115,6 @@ void wrapclose(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
 
-    fclose(p->handle);
     free(p);
     
     return;

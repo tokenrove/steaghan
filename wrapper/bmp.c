@@ -19,12 +19,8 @@
 #define BMP_MODULENAME "bmp"
 #define BMP_MODULEDESC "Windows bitmap"
 
-moduleinfo_t moduleinfo(void);
-void *wrapinit(char *filename);
-
 typedef struct {
-    char *filename;
-    FILE *handle;
+    file_t *file;
     u_int32_t w, h, type, dataoffset, bpp;
 } wraphandle_t;
 
@@ -34,17 +30,9 @@ moduleinfo_t moduleinfo(void)
     return mi;
 }
 
-short getleword(FILE *fp)
-{
-    return (fgetc(fp)|(fgetc(fp)<<8));
-}
+#include "ms-shared.c"
 
-long getledword(FILE *fp)
-{
-    return (fgetc(fp)|(fgetc(fp)<<8)|(fgetc(fp)<<16)|(fgetc(fp)<<24));
-}
-
-void *wrapinit(char *filename)
+void *wrapinit(file_t *file)
 {
     wraphandle_t *p;
     int i, j;
@@ -52,38 +40,36 @@ void *wrapinit(char *filename)
     p = (wraphandle_t *)malloc(sizeof(wraphandle_t));
     if(p == NULL) return NULL;
 
-    p->filename = filename;
-    p->handle = fopen(filename, "r+");
-    if(p->handle == NULL) return NULL;
+    p->file = file;
 
     j = 0;
-    j = getleword(p->handle);
+    j = getleword(p->file);
     if(j == 0x4D42) {
     } else {
         return NULL;
     }
 
-    fseek(p->handle, 4, SEEK_CUR); /* file size */
-    fseek(p->handle, 2, SEEK_CUR); /* X hotspot */
-    fseek(p->handle, 2, SEEK_CUR); /* Y hotspot */
-    p->dataoffset = getledword(p->handle)+ftell(p->handle);
+    (*p->file->seek)(p->file->handle, 4, CUR); /* file size */
+    (*p->file->seek)(p->file->handle, 2, CUR); /* X hotspot */
+    (*p->file->seek)(p->file->handle, 2, CUR); /* Y hotspot */
+    p->dataoffset = getledword(p->file)+(*p->file->tell)(p->file->handle);
 
-    i = getledword(p->handle);
+    i = getledword(p->file);
     if(i == 12) {
-        p->w = getledword(p->handle);
-        p->h = getledword(p->handle);
-        fseek(p->handle, 2, SEEK_CUR); /* planes */
-        p->bpp = getleword(p->handle);
+        p->w = getledword(p->file);
+        p->h = getledword(p->file);
+        (*p->file->seek)(p->file->handle, 2, CUR); /* planes */
+        p->bpp = getleword(p->file);
     } else if(i == 40) {
-        p->w = getledword(p->handle);
-        p->h = getledword(p->handle);
-        fseek(p->handle, 2, SEEK_CUR); /* planes */
-        p->bpp = getleword(p->handle);
+        p->w = getledword(p->file);
+        p->h = getledword(p->file);
+        (*p->file->seek)(p->file->handle, 2, CUR); /* planes */
+        p->bpp = getleword(p->file);
     } else if(i == 64) {
-        p->w = getledword(p->handle);
-        p->h = getledword(p->handle);
-        fseek(p->handle, 2, SEEK_CUR); /* planes */
-        p->bpp = getleword(p->handle);
+        p->w = getledword(p->file);
+        p->h = getledword(p->file);
+        (*p->file->seek)(p->file->handle, 2, CUR); /* planes */
+        p->bpp = getleword(p->file);
     } else {
         return NULL;
     }
@@ -99,9 +85,9 @@ u_int32_t wraplen(void *p_)
 
 u_int8_t wrapread(void *p_, u_int32_t pos)
 {
-    wraphandle_t *p = (wraphandle_t *)p_;
-    fseek(p->handle, pos+p->dataoffset, SEEK_SET);
-    return fgetc(p->handle)&1;
+    wraphandle_t *p = (wraphandle_t *)p_; u_int8_t c;
+    (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &c);
+    return c&1;
 }
 
 void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
@@ -109,22 +95,17 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t x;
 
-    fseek(p->handle, pos+p->dataoffset, SEEK_SET);
-    x = fgetc(p->handle)&0xFE;
-    x |= value&1;
+    (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &x);
+    x &= 0xFE;
+    x |= value;
+    (*p->file->write)(p->file->handle, pos+p->dataoffset, 1, &x);
 
-    fseek(p->handle, -1, SEEK_CUR);
-    fputc(x, p->handle);
     return;
 }
 
 void wrapclose(void *p_)
 {
-    wraphandle_t *p = (wraphandle_t *)p_;
-
-    fclose(p->handle);
-    free(p);
-    
+    free(p_);
     return;
 }
 
