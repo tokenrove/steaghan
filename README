@@ -8,7 +8,7 @@ wrapper/wav.so with large files, or with prpg/composite.so, as I have
 experienced data loss when using the two together)
 
 ``Documentation'':
- wrapper modules ---> allow steaghan to work with various file formats.
+wrapper modules ---> allow steaghan to work with various file formats.
                       pgm -> portable graymap format
                       ppm -> portable pixmap format
                       wav -> microsoft wave format (riff)
@@ -26,9 +26,12 @@ prpg modules ---> the core of steaghan, these modules decide how to spread
                                but can result in data loss for other formats.
 
 Acknowledgements:
-  Huge thanks to Daniel Barnes, whose donation of access to fast hardware
-	was essential for this project.
-  Tuomas Aura's paper, ``Practical invisibility in digital communication'',
-	was the original inspiration for this program. (Four years ago,
+  Jay Kominek, who donated feedback, ideas, and access to fast hardware.
+  Daniel Barnes, whose initial donation of access to fast hardware was
+	essential for this project.
+  Tuomas Aura's papers, ``Practical invisibility in digital communication'',
+	and its predecessor (which seems to be unavailable on the net now),
+	were the original inspiration for this program. (Four years ago,
 	now!)
-  Luby and Rackoff, of course.
+  Michael Luby and Charles Rackoff, for their construction of a PRPG from
+	a PRFG.

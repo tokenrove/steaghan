@@ -10,8 +10,18 @@
 
 #include <dlfcn.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "steaghanmods.h"
+
+#ifndef STEGMODS_TOPDIR
+#define STEGMODS_TOPDIR "."
+#endif
+
+#ifndef STEGMODS_SUFFIX
+#define STEGMODS_SUFFIX ".so"
+#endif
 
 int loadmod(moduleinfo_t *mip, char *modpath);
 void describemod(moduleinfo_t *mip);
@@ -19,19 +29,45 @@ void describemod(moduleinfo_t *mip);
 int loadmod(moduleinfo_t *mip, char *modpath)
 {
     void *dlhandle;
-    char *err;
-    
-    dlhandle = dlopen(modpath, RTLD_NOW);
-    if(dlhandle == NULL) {
-        err = dlerror();
-        if(err == NULL) err = "Unknown DL error";
-/*        warn(err); */
-        return 1;
-    }
-    *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
-    mip->dlhandle = dlhandle;
+    char *path;
+    char prefixen[4][10] = { "/hash/", "/prpg/", "/file/", "/wrapper/" };
+    int longest_prefix = 9, nprefixen = 4, i;
 
-    return 0;
+    dlhandle = dlopen(modpath, RTLD_NOW);
+    if(dlhandle != NULL) {
+        *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
+        mip->dlhandle = dlhandle;
+        return 0;
+    }
+
+    path = (char *)malloc(strlen(modpath)+longest_prefix+
+                          strlen(STEGMODS_TOPDIR)+strlen(STEGMODS_SUFFIX)+10);
+    strcpy(path, STEGMODS_TOPDIR);
+    strcat(path, modpath);
+    strcat(path, STEGMODS_SUFFIX);
+    
+    dlhandle = dlopen(path, RTLD_NOW);
+    if(dlhandle != NULL) {
+        *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
+        mip->dlhandle = dlhandle;
+        return 0;
+    }
+
+    for(i = 0; i < nprefixen; i++) {
+        strcpy(path, STEGMODS_TOPDIR);
+        strcat(path, prefixen[i]);
+        strcat(path, modpath);
+        strcat(path, STEGMODS_SUFFIX);
+        
+        dlhandle = dlopen(path, RTLD_NOW);
+        if(dlhandle != NULL) {
+            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
+            mip->dlhandle = dlhandle;
+            return 0;
+        }
+    }
+    
+    return 1;
 }
 
 void describemod(moduleinfo_t *mip)

@@ -16,10 +16,12 @@
 typedef struct {
     u_int8_t *key;
     u_int32_t keylen;
-    char *wrapper_filename;
-    char *secret_filename;
-    moduleinfo_t prpg, hash, wrapper;
-} steagconf_t;
+    char *key_filename, *wrapper_filename, *secret_filename;
+    char *prpg_modname, *hash_modname, *wrapper_modname, *file_modname;
+    moduleinfo_t prpg, hash, wrapper, filemod;
+    file_t *file;
+    char mode;
+} steaghanconf_t;
 
 extern void inject(moduleinfo_t prpg, moduleinfo_t wrapper, u_int8_t *secdata,
                    u_int32_t seclen);
