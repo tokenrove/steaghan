@@ -135,7 +135,11 @@ void dealwithargs(steaghanconf_t *conf, char **argv, int argc)
             } else if(argv[i][1] == 'c') {
                 if(i+1 < argc) conf->cipher_modname = argv[++i];
                 else usage();
-#ifndef HAVE_DLSYM
+#ifdef HAVE_DLSYM
+            } else if(argv[i][1] == 'd') {
+                if(i+1 < argc) topdir = argv[++i];
+                else usage();
+#else
             } else if(argv[i][1] == 'l') {
                 listmods();
                 exit(EXIT_SUCCESS);
@@ -191,6 +195,11 @@ void usage(void)
     fprintf(stderr, "* -k <key file>\n");
     fprintf(stderr, "  -c <cipher module> [defaults to null]\n");
 
+#ifdef HAVE_DLSYM
+    fprintf(stderr, "  -d <top directory> [defaults to %s]\n",
+            STEGMODS_TOPDIR);
+#endif
+    
     fprintf(stderr, "\nPlease see steaghan(1) for more detail.\n");
     exit(EXIT_FAILURE);
 }

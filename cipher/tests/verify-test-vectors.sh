@@ -14,7 +14,7 @@ do
     # race conditions? who cares?
     tempname=`echo $i | sed -e 's/^\(.*\)in$/\1tmp/'`
     cp $i $tempname
-    ../../utils/encipher -c `echo $i | sed -e 's/^test-vector\.\([A-z0-9]*\)\..*$/\1/'` -k `echo $i | sed -e 's/^\(.*\)in$/\1key/'` $tempname 
+    ../../utils/encipher -c `echo $i | sed -e 's/^test-vector\.\([A-z0-9]*\)\..*$/\1/'` -k `echo $i | sed -e 's/^\(.*\)in$/\1key/'` $UTILOPTS $tempname 
     cmp $tempname `echo $i | sed -e 's/^\(.*\)in$/\1out/'`
     rm -f $tempname
 done

@@ -23,6 +23,8 @@
 #define STEGMODS_SUFFIX ".so"
 #endif
 
+char *topdir = STEGMODS_TOPDIR;
+
 int loadmod(moduleinfo_t *mip, char *modpath);
 void describemod(moduleinfo_t *mip);
 void *getsym(moduleinfo_t *mip, char *sym);
@@ -55,8 +57,8 @@ int loadmod(moduleinfo_t *mip, char *modpath)
     }
 
     path = (char *)malloc(strlen(modpath)+longest_prefix+
-                          strlen(STEGMODS_TOPDIR)+strlen(STEGMODS_SUFFIX)+10);
-    strcpy(path, ".");
+                          strlen(topdir)+strlen(STEGMODS_SUFFIX)+10);
+    strcpy(path, "./");
     strcat(path, modpath);
     strcat(path, STEGMODS_SUFFIX);
     
@@ -85,7 +87,7 @@ int loadmod(moduleinfo_t *mip, char *modpath)
         }
     }
     
-    strcpy(path, STEGMODS_TOPDIR);
+    strcpy(path, topdir);
     strcat(path, modpath);
     strcat(path, STEGMODS_SUFFIX);
     
@@ -99,7 +101,7 @@ int loadmod(moduleinfo_t *mip, char *modpath)
     }
 
     for(i = 0; i < nprefixen; i++) {
-        strcpy(path, STEGMODS_TOPDIR);
+        strcpy(path, topdir);
         strcat(path, prefixen[i]);
         strcat(path, modpath);
         strcat(path, STEGMODS_SUFFIX);

@@ -60,10 +60,13 @@ allows one to use the same key for multiple wrappers, it greatly increases
 the ease with which an active attacker can corrupt the message.
 .PP
 Systems with dlfcn:
-Note that modules can be specified by their ``short'' name,
+Note that modules can and should be specified by their ``short'' name,
 e.g. classic for (STEAGHAN_TOP_DIR)/prpg/classic.so, if they reside in
 one of the known module directories. Alternately, the full path
 (including the .so terminator) can be specified.
+.TP
+\fB\-d\fR <\fItop directory\fR>
+Specifies directory from which to start a search for modules.
 .PP
 Systems without dlfcn:
 Modules are compiled into the binary itself. The following command-line

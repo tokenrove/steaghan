@@ -46,7 +46,9 @@ extern int loadmod(moduleinfo_t *mip, char *modpath);
 extern void describemod(moduleinfo_t *mip);
 extern void closemod(moduleinfo_t *mip);
 extern void *getsym(moduleinfo_t *mip, char *sym);
-#ifndef HAVE_DLSYM
+#ifdef HAVE_DLSYM
+extern char *topdir;
+#else
 void listmods(void);
 #endif
 
