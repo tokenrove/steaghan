@@ -1,0 +1,67 @@
+
+GENERAL
+
+provide path to module fu (strchr /)... or else.
+zero critial areas of memory after use...
+in the future we'll have to provide: - a way to pass variable arguments
+                                       to modules
+                                     - initialization functions for all
+                                       module types
+                                     - bignum support for things like
+                                       file length and such
+                                     - loading keys from files [including
+                                       ciphered files, and having to prompt
+                                       for passphrases securely]
+                                     - a consistent API
+				     - modules and transparent file filters
+				     - support for paletted images
+                                     - support for streams (!)
+				     - statistical analysis in tests
+				     - better error handling than assert
+                                     - better error checking, too. [wrapread(handle, -1), anyone?]
+think about CRCs, and also storing lengths with some BER-like length
+  encoding, such that we don't give out obvious knowledge of the fu.
+use the all-or-nothing transform.
+
+
+BUGS, ET CETERA
+
+wrapper/pgm and wrapper/ppm: can't find P2/P3 style files with which to test!
+wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
+hash/md*, hash/ripemd160: some minor inefficiencies, it would be nice not
+                          to do memory allocation.
+
+
+API
+
+--
+all modules:
+moduleinfo_t moduleinfo(void);
+
+typedef struct {
+    const char *name, *description;
+    enum { prpgmod, hashmod, wrappermod } moduletype;
+    void *dlhandle;
+} moduleinfo_t;
+
+--
+prpg modules:
+void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
+                hashfunction_t *hash, u_int32_t hashlen);
+u_int32_t permugen(void *permuhandle);
+void permuclose(void *permuhandle);
+
+--
+hash modules:
+u_int32_t hashlenfunc_t(void);
+u_int8_t *hash(u_int8_t *data, u_int32_t length);
+
+--
+wrapper modules:
+void *wrapinit(char *filename);
+u_int32_t wraplen(void *p);
+bool wrapread(void *p, u_int32_t bit);
+void wrapwrite(void *p, u_int32_t bit, bool value);
+void wrapclose(void *p);
+
+--

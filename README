@@ -1,0 +1,11 @@
+
+This is steaghan version alpha zero. It is an alpha release, and is
+yet ready for public consumption - think of this as a preview.
+
+Acknowledgements:
+  Huge thanks to Daniel Barnes, whose donation of access to fast hardware
+	was essential for this project.
+  Tuomas Aura's paper, ``Practical invisibility in digital communication'',
+	was the original inspiration for this program. (Four years ago,
+	now!)
+  Luby and Rackoff, of course.
