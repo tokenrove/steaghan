@@ -1,7 +1,7 @@
 /* 
  * pgm.c
  * Created: Wed Dec 15 09:45:27 1999 by tek@wiw.org
- * Revised: Wed Dec 15 09:45:27 1999 (pending)
+ * Revised: Sun Mar  5 17:04:01 2000 by tek@nehwon.local
  * Copyright 1999 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -98,7 +98,7 @@ u_int8_t wrapread(void *p_, u_int32_t pos)
     u_int8_t c;
 
     if(p->type == 5) {
-        (*p->file->read)(p->file->handle, pos, 1, &c);
+        (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &c);
         return c&1;
     } else if(p->type == 2) {
         return p->data[pos]&1;

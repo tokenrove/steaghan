@@ -1,4 +1,4 @@
-MODS=seek.so
+MODS=seek.so mmap.so
 
 default: $(MODS)
 

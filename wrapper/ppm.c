@@ -98,7 +98,7 @@ u_int8_t wrapread(void *p_, u_int32_t pos)
     u_int8_t c;
     
     if(p->type == 6) {
-        (*p->file->read)(p->file->handle, pos, 1, &c);
+        (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &c);
         return c&1;
     } else if(p->type == 3) {
         return p->data[pos]&1;
