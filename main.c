@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Tue Jan 25 14:02:14 2000 by tek@wiw.org
- * Revised: Sat Mar 25 22:07:45 2000 by tek@wiw.org
+ * Revised: Mon Apr 17 12:31:16 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -63,6 +63,11 @@ int main(int argc, char **argv)
 
         if(conf.secret_filename != NULL && strcmp(conf.secret_filename, "-")) {
             fp = fopen(conf.secret_filename, "r");
+            if(fp == NULL) {
+                fprintf(stderr, "%s: %s\n", conf.secret_filename,
+                        strerror(errno));
+                exit(EXIT_FAILURE);
+            }
             fseek(fp, 0, SEEK_END);
             seclen = ftell(fp)*8;
             rewind(fp);
@@ -93,6 +98,11 @@ int main(int argc, char **argv)
 
         if(conf.secret_filename != NULL && strcmp(conf.secret_filename, "-")) {
             fp = fopen(conf.secret_filename, "w");
+            if(fp == NULL) {
+                fprintf(stderr, "%s: %s\n", conf.secret_filename,
+                        strerror(errno));
+                exit(EXIT_FAILURE);
+            }
             fwrite(secdata, 1, seclen/8, fp);
             fclose(fp);
         } else {
@@ -194,6 +204,7 @@ void usage(void)
     fprintf(stderr, "* -w <wrapper module>\n");
     fprintf(stderr, "* -k <key file>\n");
     fprintf(stderr, "  -c <cipher module> [defaults to null]\n");
+    fprintf(stderr, "  -hi\n");
 
 #ifdef HAVE_DLSYM
     fprintf(stderr, "  -d <top directory> [defaults to %s]\n",
@@ -365,7 +376,23 @@ void setupprpg(steaghanconf_t *conf)
 
 void hashkeyvsimmobile(steaghanconf_t *conf)
 {
-    /* FIXME: K = H(Ku o f(W)) here */
+    u_int8_t *p;
+    u_int32_t immobilelen;
+
+    immobilelen = (*(wrapgetimmobilelenfunc_t)getsym(&conf->wrapper,
+                                 "wrapgetimmobilelen"))(conf->wrapper.handle);
+    p = (u_int8_t *)malloc(conf->keylen+immobilelen);
+    memcpy(p, conf->key, conf->keylen);
+    (*(wrapgetimmobilefunc_t)getsym(&conf->wrapper,
+                                    "wrapgetimmobile"))(conf->wrapper.handle,
+                                                        p+conf->keylen);
+    free(conf->key);
+    conf->key = (u_int8_t *)malloc((*(hashlenfunc_t)getsym(&conf->hash,
+                                                           "hashlen"))());
+    (*(hashfunc_t)getsym(&conf->hash, "hash"))(p, conf->keylen+immobilelen,
+                                               conf->key);
+    conf->keylen = (*(hashlenfunc_t)getsym(&conf->hash, "hashlen"))();
+    free(p);
     return;
 }
 
