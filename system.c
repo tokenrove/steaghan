@@ -54,6 +54,7 @@ void getpassphrase(char **passphrase)
 
 void randominit(void)
 {
+    /* FIXME: This is abysmal */
     srand(time(NULL)+getpid());
 }
 

@@ -2,7 +2,7 @@
 
 # This is the really important one. Does your system support dlsym?
 # And does it work like Linux's?
-HAS_DLSYM=no
+HAVE_DLSYM=no
 # We're little endian
 ENDIAN=-DUSE_LITTLE_ENDIAN
 # Comment the above and uncomment below to use the generic code
@@ -12,31 +12,30 @@ DEFINES=-DSTEGMODS_TOPDIR='"/usr/local/lib/steaghan"' $(ENDIAN)
 CFLAGS=-Wall -g -pedantic -ansi #-O9 -funroll-loops
 CPPFLAGS=$(DEFINES) -I$(CURDIR)
 TOPDIR=$(shell pwd)
+LDFLAGS=-L$(TOPDIR)
 
-ifeq ($(HAS_DLSYM), yes)
+ifeq ($(HAVE_DLSYM), yes)
 DEFINES := $(DEFINES) -DHAVE_DLSYM
-LDFLAGS=-ldl
-else
-LDFLAGS=
-endif
-
-export HAS_DLSYM CFLAGS CPPFLAGS LDFLAGS TOPDIR
-
-STEGBASEOBJS=main.o extract.o inject.o statusbar.o pkcs5pad.o system.o cipher/phrasetokey.o
-
-ifeq ($(HAS_DLSYM), yes)
+LDFLAGS := $(LDFLAGS) -ldl
 MODSDOTO=mods.dl.linux.o
-STEGOBJS=$(STEGBASEOBJS) $(MODSDOTO)
+
+default: steaghan modules test util
+
 else
 MODSDOTO=mods.generic.o
-STEGOBJS=$(STEGBASEOBJS) $(MODSDOTO) $(shell cat .modules.list)
-endif
-
-export MODSDOTO
-
-MODULEDIRS=hashes prpgs wrappers ciphers files
 
 default: cleanmodlist steaghan test util
+
+endif
+
+export HAVE_DLSYM CFLAGS CPPFLAGS LDFLAGS TOPDIR MODSDOTO
+
+STEGCFLAGS=-rdynamic
+STEGOBJS=main.o extract.o inject.o statusbar.o pkcs5pad.o system.o $(MODSDOTO)
+STEGLIBS=-lsteaghan_hash -lsteaghan_prpg -lsteaghan_wrapper -lsteaghan_cipher -lsteaghan_file 
+MODULEDIRS=hashes prpgs wrappers ciphers files
+
+modules: $(MODULEDIRS)
 
 mods.generic.o: mods.generic.h
 	$(CC) $(CPPFLAGS) -c mods.generic.c -o mods.generic.o
@@ -50,7 +49,7 @@ cleanmodlist:
 .modules.list: $(MODULEDIRS)
 
 steaghan: $(STEGOBJS)
-	$(CC) -rdynamic $(CFLAGS) $(STEGOBJS) -o steaghan $(LDFLAGS)
+	$(CC) $(STEGCFLAGS) $(CFLAGS) $^ -o steaghan $(LDFLAGS) $(STEGLIBS)
 
 hashes:
 	$(MAKE) -C hash

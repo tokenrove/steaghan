@@ -20,29 +20,67 @@
 #define RAW_MODULENAME "raw"
 #define RAW_MODULEDESC "raw 8-bit data [assumed to be noisy]"
 
-#define OURCRCMAGIC 0x04C11DB7
-
-moduleinfo_t moduleinfo(void);
-void *wrapinit(file_t *file);
-
 typedef struct {
     char *filename;
     file_t *file;
     u_int32_t nbytes;
-    u_int32_t crctable[256];
 } wraphandle_t;
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t raw_moduleinfo(void);
+void *raw_wrapinit(file_t *file);
+u_int32_t raw_wraplen(void *p_);
+u_int8_t raw_wrapread(void *p_, u_int32_t pos);
+void raw_wrapwrite(void *p_, u_int32_t pos, u_int8_t value);
+void raw_wrapclose(void *p_);
+void raw_wrapgetimmobile(void *p_, u_int8_t *immobile);
+u_int32_t raw_wrapgetimmobilelen(void *p_);
+
+modulefunctable_t *raw_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 8;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)raw_moduleinfo;
+
+    mft->funcs[1].name = "wrapinit";
+    mft->funcs[1].f = (void *)raw_wrapinit;
+
+    mft->funcs[2].name = "wraplen";
+    mft->funcs[2].f = (void *)raw_wraplen;
+
+    mft->funcs[3].name = "wrapread";
+    mft->funcs[3].f = (void *)raw_wrapread;
+
+    mft->funcs[4].name = "wrapwrite";
+    mft->funcs[4].f = (void *)raw_wrapwrite;
+
+    mft->funcs[5].name = "wrapclose";
+    mft->funcs[5].f = (void *)raw_wrapclose;
+
+    mft->funcs[6].name = "wrapgetimmobile";
+    mft->funcs[6].f = (void *)raw_wrapgetimmobile;
+
+    mft->funcs[7].name = "wrapgetimmobilelen";
+    mft->funcs[7].f = (void *)raw_wrapgetimmobilelen;
+
+    return mft;
+}
+
+moduleinfo_t raw_moduleinfo(void)
 {
     moduleinfo_t mi = { RAW_MODULENAME, RAW_MODULEDESC, wrappermod, 0 };
     return mi;
 }
 
-void *wrapinit(file_t *file)
+void *raw_wrapinit(file_t *file)
 {
     wraphandle_t *p;
-    int i, j;
-    u_int32_t c;
 
     p = (wraphandle_t *)malloc(sizeof(wraphandle_t));
     if(p == NULL) return NULL;
@@ -52,23 +90,16 @@ void *wrapinit(file_t *file)
     (*p->file->seek)(p->file->handle, 0, END);
     p->nbytes = (*p->file->tell)(p->file->handle);
 
-    for(i = 0; i < 256; i++) {
-        for(c = (i<<24), j = 8; j > 0; j--) {
-            c = (c & 0x80000000) ? ((c << 1) ^ OURCRCMAGIC) : (c << 1);
-        }
-        p->crctable[i] = c;
-    }
-    
     return (void *)p;
 }
 
-u_int32_t wraplen(void *p_)
+u_int32_t raw_wraplen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->nbytes;
 }
 
-u_int8_t wrapread(void *p_, u_int32_t pos)
+u_int8_t raw_wrapread(void *p_, u_int32_t pos)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t c;
@@ -78,7 +109,7 @@ u_int8_t wrapread(void *p_, u_int32_t pos)
     return c&1;
 }
 
-void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
+void raw_wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t x;
@@ -91,7 +122,7 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     return;
 }
 
-void wrapclose(void *p_)
+void raw_wrapclose(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
 
@@ -99,13 +130,13 @@ void wrapclose(void *p_)
     return;
 }
 
-void wrapgetimmobilelen(void *p_)
+u_int32_t raw_wrapgetimmobilelen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->nbytes;
 }
 
-void wrapgetimmobile(void *p_, u_int8_t *immobile)
+void raw_wrapgetimmobile(void *p_, u_int8_t *immobile)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     int i;

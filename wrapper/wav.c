@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include "steaghanmods.h"
+#include "ms-shared.h"
 
 #define WAV_MODULENAME "wav"
 #define WAV_MODULEDESC "Microsoft WAVE audio"
@@ -24,15 +25,59 @@ typedef struct {
     u_int16_t bps, channels;
 } wraphandle_t;
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t wav_moduleinfo(void);
+void *wav_wrapinit(file_t *file);
+u_int32_t wav_wraplen(void *p_);
+u_int8_t wav_wrapread(void *p_, u_int32_t pos);
+void wav_wrapwrite(void *p_, u_int32_t pos, u_int8_t value);
+void wav_wrapclose(void *p_);
+void wav_wrapgetimmobile(void *p_, u_int8_t *immobile);
+u_int32_t wav_wrapgetimmobilelen(void *p_);
+
+modulefunctable_t *wav_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 8;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)wav_moduleinfo;
+
+    mft->funcs[1].name = "wrapinit";
+    mft->funcs[1].f = (void *)wav_wrapinit;
+
+    mft->funcs[2].name = "wraplen";
+    mft->funcs[2].f = (void *)wav_wraplen;
+
+    mft->funcs[3].name = "wrapread";
+    mft->funcs[3].f = (void *)wav_wrapread;
+
+    mft->funcs[4].name = "wrapwrite";
+    mft->funcs[4].f = (void *)wav_wrapwrite;
+
+    mft->funcs[5].name = "wrapclose";
+    mft->funcs[5].f = (void *)wav_wrapclose;
+
+    mft->funcs[6].name = "wrapgetimmobile";
+    mft->funcs[6].f = (void *)wav_wrapgetimmobile;
+
+    mft->funcs[7].name = "wrapgetimmobilelen";
+    mft->funcs[7].f = (void *)wav_wrapgetimmobilelen;
+
+    return mft;
+}
+
+moduleinfo_t wav_moduleinfo(void)
 {
     moduleinfo_t mi = { WAV_MODULENAME, WAV_MODULEDESC, wrappermod, 0 };
     return mi;
 }
 
-#include "ms-shared.c"
-
-void *wrapinit(file_t *file)
+void *wav_wrapinit(file_t *file)
 {
     wraphandle_t *p;
     char buffer[5];
@@ -72,13 +117,13 @@ void *wrapinit(file_t *file)
     return (void *)p;
 }
 
-u_int32_t wraplen(void *p_)
+u_int32_t wav_wraplen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->nsamples;
 }
 
-u_int8_t wrapread(void *p_, u_int32_t pos)
+u_int8_t wav_wrapread(void *p_, u_int32_t pos)
 {
     wraphandle_t *p = (wraphandle_t *)p_; u_int8_t c;
     if(p->bps == 8)
@@ -88,7 +133,7 @@ u_int8_t wrapread(void *p_, u_int32_t pos)
     return c&1;
 }
 
-void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
+void wav_wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t x;
@@ -111,7 +156,7 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     return;
 }
 
-void wrapclose(void *p_)
+void wav_wrapclose(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
 
@@ -121,13 +166,13 @@ void wrapclose(void *p_)
 }
 
 
-u_int32_t wrapgetimmobilelen(void *p_)
+u_int32_t wav_wrapgetimmobilelen(void *p_)
 { 
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->nsamples+p->dataoffset;
 } 
 
-void wrapgetimmobile(void *p_, u_int8_t *immobile)
+void wav_wrapgetimmobile(void *p_, u_int8_t *immobile)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     int i;

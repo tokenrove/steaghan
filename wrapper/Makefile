@@ -1,5 +1,5 @@
-#MODS=raw.so pgm.so ppm.so bmp.so wav.so
-MODS=pgm.so
-LIB=libsteaghan_prpg.a
+MODS=raw.so pgm.so ppm.so bmp.so wav.so
+LIB=libsteaghan_wrapper.a
+LIBEXTRAS=pnm-shared.o ms-shared.o
 
-include ../Rules.make
+include $(TOPDIR)/Rules.make

@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "steaghanmods.h"
+#include "pnm-shared.h"
 
 #define PGM_MODULENAME "pgm"
 #define PGM_MODULEDESC "PGM graymap"
@@ -76,8 +77,6 @@ moduleinfo_t pgm_moduleinfo(void)
     moduleinfo_t mi = { PGM_MODULENAME, PGM_MODULEDESC, wrappermod, 0 };
     return mi;
 }
-
-#include "pnm-shared.c"
 
 /* lines are max 70 characters, so we should be safe with this */
 #define BUFLEN 81

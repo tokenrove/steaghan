@@ -15,6 +15,9 @@
 #include "steaghanmods.h"
 
 void standardphrasetokey(char *phrase, u_int8_t *key, u_int32_t keylen,
+                         moduleinfo_t hash);
+
+void standardphrasetokey(char *phrase, u_int8_t *key, u_int32_t keylen,
                          moduleinfo_t hash)
 {
     hashfunc_t hashfunc = (hashfunc_t)getsym(&hash, "hash");

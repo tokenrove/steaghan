@@ -10,6 +10,9 @@
 
 #include "steaghanmods.h"
 
+short getleword(file_t *file);
+long getledword(file_t *file);
+
 short getleword(file_t *file)
 {
     short x; u_int8_t c;

@@ -10,6 +10,12 @@
 
 #include "steaghanmods.h"
 
+int iswhitespace(char c);
+void readtoeol(file_t *file);
+void readtononws(file_t *file);
+void gotonexttoken(file_t *file);
+void readtoken(char *buffer, int buflen, file_t *file);
+
 int iswhitespace(char c)
 {
     if(c == ' ' || c == '\t' || c == '\n') return 1;

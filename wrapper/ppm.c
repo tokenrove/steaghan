@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "steaghanmods.h"
+#include "pnm-shared.h"
 
 #define PPM_MODULENAME "ppm"
 #define PPM_MODULEDESC "Portable Pixmap Format"
@@ -25,18 +26,62 @@ typedef struct {
     u_int8_t *data, type;
 } wraphandle_t;
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t ppm_moduleinfo(void);
+void *ppm_wrapinit(file_t *file);
+u_int32_t ppm_wraplen(void *p_);
+u_int8_t ppm_wrapread(void *p_, u_int32_t pos);
+void ppm_wrapwrite(void *p_, u_int32_t pos, u_int8_t value);
+void ppm_wrapclose(void *p_);
+void ppm_wrapgetimmobile(void *p_, u_int8_t *immobile);
+u_int32_t ppm_wrapgetimmobilelen(void *p_);
+
+modulefunctable_t *ppm_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 8;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)ppm_moduleinfo;
+
+    mft->funcs[1].name = "wrapinit";
+    mft->funcs[1].f = (void *)ppm_wrapinit;
+
+    mft->funcs[2].name = "wraplen";
+    mft->funcs[2].f = (void *)ppm_wraplen;
+
+    mft->funcs[3].name = "wrapread";
+    mft->funcs[3].f = (void *)ppm_wrapread;
+
+    mft->funcs[4].name = "wrapwrite";
+    mft->funcs[4].f = (void *)ppm_wrapwrite;
+
+    mft->funcs[5].name = "wrapclose";
+    mft->funcs[5].f = (void *)ppm_wrapclose;
+
+    mft->funcs[6].name = "wrapgetimmobile";
+    mft->funcs[6].f = (void *)ppm_wrapgetimmobile;
+
+    mft->funcs[7].name = "wrapgetimmobilelen";
+    mft->funcs[7].f = (void *)ppm_wrapgetimmobilelen;
+
+    return mft;
+}
+
+moduleinfo_t ppm_moduleinfo(void)
 {
     moduleinfo_t mi = { PPM_MODULENAME, PPM_MODULEDESC, wrappermod, 0 };
     return mi;
 }
 
-#include "pnm-shared.c"
-
 /* lines are max 70 characters, so we should be safe with this */
 #define BUFLEN 81
 
-void *wrapinit(file_t *file)
+void *ppm_wrapinit(file_t *file)
 {
     wraphandle_t *p;
     int i;
@@ -86,13 +131,13 @@ void *wrapinit(file_t *file)
     return (void *)p;
 }
 
-u_int32_t wraplen(void *p_)
+u_int32_t ppm_wraplen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->w*p->h*3;
 }
 
-u_int8_t wrapread(void *p_, u_int32_t pos)
+u_int8_t ppm_wrapread(void *p_, u_int32_t pos)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t c;
@@ -105,7 +150,7 @@ u_int8_t wrapread(void *p_, u_int32_t pos)
     } else return 0;
 }
 
-void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
+void ppm_wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t x;
@@ -125,7 +170,7 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     return;
 }
 
-void wrapclose(void *p_)
+void ppm_wrapclose(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     int i;
@@ -151,7 +196,7 @@ void wrapclose(void *p_)
     return;
 }
 
-u_int32_t wrapgetimmobilelen(void *p_)
+u_int32_t ppm_wrapgetimmobilelen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     if(p->type == 3)
@@ -160,7 +205,7 @@ u_int32_t wrapgetimmobilelen(void *p_)
         return p->w*p->h+p->dataoffset;
 }
 
-void wrapgetimmobile(void *p_, u_int8_t *immobile)
+void ppm_wrapgetimmobile(void *p_, u_int8_t *immobile)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     int i;

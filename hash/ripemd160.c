@@ -141,7 +141,7 @@ void ripemd160_hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 
     rmd160_hash_internal(X, H);
 
-#ifdef LITTLE_ENDIAN
+#ifdef USE_LITTLE_ENDIAN
     memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
 #else
     for(i = 0; i < RIPEMD160_IVSIZE; i++) {

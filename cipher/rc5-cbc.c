@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "steaghanmods.h"
+#include "phrasetokey.h"
 
 #define RC5_CBC_MODULENAME "rc5"
 #define RC5_CBC_MODULEDESC "RC5/16/12/4 block cipher in CBC mode"

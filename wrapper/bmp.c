@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "steaghanmods.h"
+#include "ms-shared.h"
 
 #define BMP_MODULENAME "bmp"
 #define BMP_MODULEDESC "Windows bitmap"
@@ -24,15 +25,59 @@ typedef struct {
     u_int32_t w, h, type, dataoffset, bpp;
 } wraphandle_t;
 
-moduleinfo_t moduleinfo(void)
+moduleinfo_t bmp_moduleinfo(void);
+void *bmp_wrapinit(file_t *file);
+u_int32_t bmp_wraplen(void *p_);
+u_int8_t bmp_wrapread(void *p_, u_int32_t pos);
+void bmp_wrapwrite(void *p_, u_int32_t pos, u_int8_t value);
+void bmp_wrapclose(void *p_);
+void bmp_wrapgetimmobile(void *p_, u_int8_t *immobile);
+u_int32_t bmp_wrapgetimmobilelen(void *p_);
+
+modulefunctable_t *bmp_modulefunctable(void)
+{
+    modulefunctable_t *mft;
+
+    mft = (modulefunctable_t *)malloc(sizeof(modulefunctable_t));
+    if(mft == NULL) return NULL;
+    mft->nfuncs = 8;
+    mft->funcs = (modulefunc_t *)malloc(sizeof(modulefunc_t)*mft->nfuncs);
+    if(mft->funcs == NULL) return NULL;
+
+    mft->funcs[0].name = "moduleinfo";
+    mft->funcs[0].f = (void *)bmp_moduleinfo;
+
+    mft->funcs[1].name = "wrapinit";
+    mft->funcs[1].f = (void *)bmp_wrapinit;
+
+    mft->funcs[2].name = "wraplen";
+    mft->funcs[2].f = (void *)bmp_wraplen;
+
+    mft->funcs[3].name = "wrapread";
+    mft->funcs[3].f = (void *)bmp_wrapread;
+
+    mft->funcs[4].name = "wrapwrite";
+    mft->funcs[4].f = (void *)bmp_wrapwrite;
+
+    mft->funcs[5].name = "wrapclose";
+    mft->funcs[5].f = (void *)bmp_wrapclose;
+
+    mft->funcs[6].name = "wrapgetimmobile";
+    mft->funcs[6].f = (void *)bmp_wrapgetimmobile;
+
+    mft->funcs[7].name = "wrapgetimmobilelen";
+    mft->funcs[7].f = (void *)bmp_wrapgetimmobilelen;
+
+    return mft;
+}
+
+moduleinfo_t bmp_moduleinfo(void)
 {
     moduleinfo_t mi = { BMP_MODULENAME, BMP_MODULEDESC, wrappermod, 0 };
     return mi;
 }
 
-#include "ms-shared.c"
-
-void *wrapinit(file_t *file)
+void *bmp_wrapinit(file_t *file)
 {
     wraphandle_t *p;
     int i, j;
@@ -77,20 +122,20 @@ void *wrapinit(file_t *file)
     return (void *)p;
 }
 
-u_int32_t wraplen(void *p_)
+u_int32_t bmp_wraplen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->w*p->h*(p->bpp/8);
 }
 
-u_int8_t wrapread(void *p_, u_int32_t pos)
+u_int8_t bmp_wrapread(void *p_, u_int32_t pos)
 {
     wraphandle_t *p = (wraphandle_t *)p_; u_int8_t c;
     (*p->file->read)(p->file->handle, pos+p->dataoffset, 1, &c);
     return c&1;
 }
 
-void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
+void bmp_wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     u_int8_t x;
@@ -103,19 +148,19 @@ void wrapwrite(void *p_, u_int32_t pos, u_int8_t value)
     return;
 }
 
-void wrapclose(void *p_)
+void bmp_wrapclose(void *p_)
 {
     free(p_);
     return;
 }
 
-u_int32_t wrapgetimmobilelen(void *p_)
+u_int32_t bmp_wrapgetimmobilelen(void *p_)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     return p->w*p->h*(p->bpp/8)+p->dataoffset;    
 }
 
-void wrapgetimmobile(void *p_, u_int8_t *immobile)
+void bmp_wrapgetimmobile(void *p_, u_int8_t *immobile)
 {
     wraphandle_t *p = (wraphandle_t *)p_;
     int i;
@@ -123,7 +168,7 @@ void wrapgetimmobile(void *p_, u_int8_t *immobile)
     (*p->file->read)(p->file->handle, 0, p->dataoffset, (void *)immobile);
 
     (*p->file->read)(p->file->handle, p->dataoffset, p->w*p->h*(p->bpp/8),
-                     (void *)immobile+p->dataoffset);
+                     (void *)(immobile+p->dataoffset));
     for(i = p->dataoffset; i < p->w*p->h*(p->bpp/8); i++) {
         immobile[i] &= 0xFE;
     }

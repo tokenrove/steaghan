@@ -117,7 +117,7 @@ void md4_hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 
     md4_hash_internal(X, H);
 
-#ifdef LITTLE_ENDIAN
+#ifdef USE_LITTLE_ENDIAN
     memcpy(out, H, MD4_IVSIZE*sizeof(u_int32_t));
 #else
     for(i = 0; i < MD4_IVSIZE; i++) {
