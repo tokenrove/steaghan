@@ -37,8 +37,7 @@ void usage(void) {
 
 int main(int argc, char **argv)
 {
-    hashfunc_t hashfunc;
-    u_int32_t hashlen, wraplen, seclen;
+    u_int32_t wraplen, seclen;
     u_int8_t *secdata;
     FILE *fp;
     int i;
@@ -152,9 +151,6 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    hashlen = (*(hashlenfunc_t)dlsym(conf.hash.dlhandle, "hashlen"))();
-    hashfunc = (hashfunc_t)dlsym(conf.hash.dlhandle, "hash");
-
     conf.wrapper.handle = (*(wrapinitfunc_t)dlsym(conf.wrapper.dlhandle,
                                                   "wrapinit"))(conf.file);
     if(conf.wrapper.handle == NULL) {
@@ -168,8 +164,12 @@ int main(int argc, char **argv)
                                                 "permuinit"))(wraplen,
                                                               conf.key,
                                                               conf.keylen,
-                                                              hashfunc,
-                                                              hashlen);
+                                                              conf.hash);
+    if(conf.prpg.handle == NULL) {
+        fprintf(stderr, "failed to setup the prpg handle. (Do you have ");
+        fprintf(stderr, " enough memory, did you supply a valid hash?)\n");
+        exit(EXIT_FAILURE);
+    }
 
     if(conf.mode == 'i') {
         printf("injecting...\n");

@@ -19,7 +19,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 
-#include "steaghanmods.h"
+#include "steaghan.h"
 
 
 int main(int argc, char **argv)
@@ -34,7 +34,14 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     
-    loadmod(&hash, argv[1]);
+    if(loadmod(&hash, argv[1])) {
+        fprintf(stderr, "Unable to load module %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+    if(hash.moduletype != hashmod) {
+        fprintf(stderr, "%s is not a hash module!\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
     hashlen=(*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
     mogo = (u_int8_t *)malloc(hashlen/8);
     if(mogo == NULL) {

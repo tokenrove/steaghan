@@ -1,4 +1,4 @@
-MODS=lr.so composite.so classic.so
+MODS=rc5.so
 
 default: $(MODS)
 

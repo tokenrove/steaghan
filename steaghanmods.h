@@ -15,7 +15,7 @@
 
 typedef struct {
     const char *name, *description;
-    enum { prpgmod, hashmod, wrappermod, filemod } moduletype;
+    enum { prpgmod, hashmod, wrappermod, filemod, ciphermod } moduletype;
     void *dlhandle;
     void *handle;
 } moduleinfo_t;
@@ -38,18 +38,27 @@ typedef u_int32_t (*hashlenfunc_t)(void);
 typedef u_int8_t *(*hashfunc_t)(u_int8_t *, u_int32_t, u_int8_t *);
 /* prpg modules */
 typedef void *(*permuinitfunc_t)(u_int32_t, u_int8_t *, u_int32_t,
-                                 hashfunc_t, u_int32_t);
+                                 moduleinfo_t);
 typedef u_int32_t (*permugenfunc_t)(void *);
 typedef void (*permuclosefunc_t)(void *);
 /* wrapper modules */
-typedef void *(*wrapinitfunc_t)(file_t *file);
-typedef u_int32_t (*wraplenfunc_t)(void *p_);
-typedef u_int8_t (*wrapreadfunc_t)(void *p_, u_int32_t pos);
-typedef void (*wrapwritefunc_t)(void *p_, u_int32_t pos, u_int8_t value);
-typedef void (*wrapclosefunc_t)(void *p_);
+typedef void *(*wrapinitfunc_t)(file_t *);
+typedef u_int32_t (*wraplenfunc_t)(void *);
+typedef u_int8_t (*wrapreadfunc_t)(void *, u_int32_t);
+typedef void (*wrapwritefunc_t)(void *, u_int32_t, u_int8_t);
+typedef void (*wrapclosefunc_t)(void *);
 /* file modules */
-typedef file_t *(*fileinitfunc_t)(char *filename);
-typedef void (*fileclosefunc_t)(file_t *file);
+typedef file_t *(*fileinitfunc_t)(char *);
+typedef void (*fileclosefunc_t)(file_t *);
+/* cipher modules */
+typedef u_int32_t (*cipherkeylenfunc_t)(void);
+typedef u_int32_t (*cipherivlenfunc_t)(void);
+typedef u_int32_t (*cipherblocklenfunc_t)(void);
+typedef void *(*cipherinitfunc_t)(u_int8_t *, u_int8_t *);
+typedef void (*encipherfunc_t)(void *, u_int8_t *, u_int8_t *, u_int32_t);
+typedef void (*decipherfunc_t)(void *, u_int8_t *, u_int8_t *, u_int32_t);
+typedef void (*cipherclosefunc_t)(void *);
+
 
 #endif /* STEAGHANMODS_H */
 

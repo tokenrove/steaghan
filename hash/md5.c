@@ -6,8 +6,8 @@
  * 
  */
 
-#include <assert.h>
-#include <stdlib.h>
+#include <endian.h>
+#include <string.h>
 
 #include "steaghanmods.h"
 
@@ -109,16 +109,16 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 
     hash_internal(X, H);
 
-    /*
-#ifdef BIG_ENDIAN
-    for(i = 0; i < MD5_IVSIZE; i++)
-        for(j = 0; j < 4; j++)
-            out[(i*sizeof(u_int32_t))+j] = ((u_int8_t*)&H[i])[3-j];
+#ifdef LITTLE_ENDIAN
+    memcpy(out, H, MD5_IVSIZE*sizeof(u_int32_t));
 #else
-    memcpy(out, H, MD5_IVSIZE*sizeof(u_int32_t));
-    #endif */
-
-    memcpy(out, H, MD5_IVSIZE*sizeof(u_int32_t));
+    for(i = 0; i < MD5_IVSIZE; i++) {
+        out[4*i+0]=(H[i]>> 0)&0xFF;
+        out[4*i+1]=(H[i]>> 8)&0xFF;
+        out[4*i+2]=(H[i]>>16)&0xFF;
+        out[4*i+3]=(H[i]>>24)&0xFF;
+    }
+#endif
 
     return;
 }

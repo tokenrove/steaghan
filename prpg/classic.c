@@ -6,22 +6,14 @@
  * 
  */
 
-#include <assert.h>
+#include <dlfcn.h>
 #include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "steaghanmods.h"
 
 #define CLASSIC_MODULENAME "classic"
 #define CLASSIC_MODULEDESC "Classical shuffle method"
-
-/* exportable functions */
-moduleinfo_t moduleinfo(void);
-void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
-                hashfunc_t hash, u_int32_t hashlen);
-u_int32_t permugen(void *p_);
-void permuclose(void *p_);
 
 /* module internal fu */
 typedef struct {
@@ -41,7 +33,7 @@ moduleinfo_t moduleinfo(void)
 /*
  */
 void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
-                hashfunc_t hash, u_int32_t hashlen)
+                moduleinfo_t hash)
 {
     permuhandle_t *p;
     int i, j;
@@ -49,34 +41,37 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
     u_int8_t *catspace;
 
     p = (permuhandle_t *)malloc(sizeof(permuhandle_t));
-    assert(p != NULL);
+    if(p == NULL) return NULL;
 
-    assert(n > 0);
+    if(n <= 0) return NULL;
     
     p->i = 0;
     p->n = n;
     p->shuffle = (u_int32_t *)malloc(p->n*sizeof(u_int32_t));
-    assert(p->shuffle != NULL);
+    if(p->shuffle == NULL) return NULL;
 
     for(i = 0; i < n; i++) {
         p->shuffle[i] = i;
     }
 
+    if(hash.moduletype != hashmod) return NULL;
+    p->hash = (hashfunc_t)dlsym(hash.dlhandle, "hash");
+    p->hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
+
     hpermute = 0;
     catlen = keylen+sizeof(u_int32_t);
     catspace = (u_int8_t *)malloc(catlen);
-    assert(catspace != NULL);
+    if(catspace == NULL) return NULL;
     memcpy(catspace, key, keylen);
     memcpy(catspace+keylen, &hpermute, sizeof(u_int32_t));
 
-    h = (u_int32_t *)malloc(hashlen/8);
-    assert(h != NULL);
+    h = (u_int32_t *)malloc(p->hashlen/8);
+    if(h == NULL) return NULL;
     
-    (*hash)(catspace, catlen, (u_int8_t *)h);
-    hcount = hashlen/32;
+    (*p->hash)(catspace, catlen, (u_int8_t *)h);
+    hcount = p->hashlen/32;
 
-    /* FIXME: this shouldn't use RAND_MAX, this shouldn't assume h is at
-       least 32 bits */
+    /* FIXME: this shouldn't assume h is at least 32 bits */
     for(i = 0; i < p->n-1 && n > 0; i++) {
         j = h[0]%n;
         if(j != n-1) {
@@ -91,8 +86,8 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
             hcount--;
         } else {
             memcpy(catspace+keylen, &hpermute, sizeof(u_int32_t));
-            (*hash)(catspace, catlen, (u_int8_t *)h);
-            hcount = hashlen/32;
+            (*p->hash)(catspace, catlen, (u_int8_t *)h);
+            hcount = p->hashlen/32;
         }
     }
 

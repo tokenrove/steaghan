@@ -11,8 +11,7 @@
  *
  */
 
-#include <assert.h>
-#include <stdio.h>
+#include <dlfcn.h>
 #include <stdlib.h>
 
 #include "steaghanmods.h"
@@ -20,12 +19,6 @@
 #define COMPOSITE_MODULENAME "composite [unreliable]"
 #define COMPOSITE_MODULEDESC "Luby-Rackoff construct for appropriately composite [and large] n"
 
-/* exportable functions */
-moduleinfo_t moduleinfo(void);
-void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
-                hashfunc_t hash, u_int32_t hashlen);
-u_int32_t permugen(void *p_);
-void permuclose(void *p_);
 /* internal functions */
 u_int32_t closestdivisor(u_int32_t n);
 
@@ -48,12 +41,12 @@ moduleinfo_t moduleinfo(void)
 }
 
 void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
-                hashfunc_t hash, u_int32_t hashlen)
+                moduleinfo_t hash)
 {
     permuhandle_t *p;
 
     p = (permuhandle_t *)malloc(sizeof(permuhandle_t));
-    assert(p != NULL);
+    if(p == NULL) return NULL;
 
     p->i = 0;
     p->n = n;
@@ -63,12 +56,13 @@ void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
 
     p->catlen = p->keylen+sizeof(u_int32_t);
     p->catspace = (u_int8_t *)malloc(p->catlen);
-    assert(p->catspace != NULL);
+    if(p->catspace == NULL) return NULL;
 
-    p->hash = hash;
-    p->hashlen = hashlen;
-    p->hashbuf = (u_int32_t *)malloc(hashlen/8);
-    assert(p->hashbuf != NULL);
+    if(hash.moduletype != hashmod) return NULL;
+    p->hash = (hashfunc_t)dlsym(hash.dlhandle, "hash");
+    p->hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
+    p->hashbuf = (u_int32_t *)malloc(p->hashlen/8);
+    if(p->hashbuf == NULL) return NULL;
 
     p->x = closestdivisor(p->n);
     p->y = p->n/p->x;

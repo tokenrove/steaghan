@@ -1,10 +1,14 @@
 
-CFLAGS=-Wall -g -pedantic -ansi -I$(CURDIR)
+DEFINES=-DSTEGMODS_TOPDIR='"/usr/local/lib/steaghan"' #-DLITTLE_ENDIAN
+CFLAGS=-Wall -g -pedantic -ansi -O9 -funroll-loops
+CPPFLAGS=$(DEFINES) -I$(CURDIR)
 LDFLAGS=-ldl
-export CFLAGS LDFLAGS
+export CFLAGS CPPFLAGS LDFLAGS
 STEGOBJS=main.o mods.o extract.o inject.o statusbar.o
 
-default: steaghan hashes prpgs wrappers files test util
+include Rules.make
+
+default: steaghan hashes prpgs wrappers ciphers files test util
 
 steaghan: $(STEGOBJS)
 	$(CC) -rdynamic $(CFLAGS) $(STEGOBJS) -o steaghan $(LDFLAGS)
@@ -17,6 +21,9 @@ prpgs:
 
 wrappers:
 	$(MAKE) -C wrapper 
+
+ciphers:
+	$(MAKE) -C cipher
 
 files:
 	$(MAKE) -C file

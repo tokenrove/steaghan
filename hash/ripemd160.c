@@ -119,16 +119,16 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 
     hash_internal(X, H);
 
-    /*
-#ifdef BIG_ENDIAN
-    for(i = 0; i < RIPEMD160_IVSIZE; i++)
-        for(j = 0; j < 4; j++)
-            out[(i*sizeof(u_int32_t))+j] = ((u_int8_t*)&H[i])[3-j];
+#ifdef LITTLE_ENDIAN
+    memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
 #else
-    memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
-    #endif */
-
-    memcpy(out, H, RIPEMD160_IVSIZE*sizeof(u_int32_t));
+    for(i = 0; i < RIPEMD160_IVSIZE; i++) {
+        out[4*i]=H[i];
+        out[4*i+1]=H[i]>>8;
+        out[4*i+2]=H[i]>>16;
+        out[4*i+3]=H[i]>>24;
+    }
+#endif
 
     return;
 }

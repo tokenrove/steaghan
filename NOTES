@@ -1,13 +1,11 @@
 
 GENERAL
 
-provide path to module fu (strchr /)... or else.
 zero critial areas of memory after use...
 in the future we'll have to provide: - a way to pass variable arguments
                                        to modules
                                      - initialization functions for all
-                                       module types [can contribute to fixing
-				       hash module inefficiencies]
+                                       module types
 				     - error callbacks, so that the main
 				       program can deal with errors without
 				       complexifying module code
@@ -26,6 +24,7 @@ in the future we'll have to provide: - a way to pass variable arguments
 				     - better error handling than assert
                                      - better error checking, too. [wrapread(handle, -1), anyone?]
 				     - some way to profile dl modules
+				     - padding helper functions for ciphers
 think about CRCs, and also storing lengths with some BER-like length
   encoding, such that we don't give out obvious knowledge of the fu.
 use the all-or-nothing transform.
@@ -38,7 +37,9 @@ wrapper/pgm and wrapper/ppm: can't find P2/P3 style files with which to test!
 wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
 wrapper/wav: only PCM support, no support for RIFFs with different chunk
              layouts, unreliable (maybe). 
-hash/md*, hash/ripemd160: some minor inefficiencies
+hash/md*, hash/ripemd160: some minor inefficiencies, certain cases seem
+			  to break them, strangely.
+cipher/rc5: only supports ECB mode
 
 
 API
@@ -49,14 +50,14 @@ moduleinfo_t moduleinfo(void);
 
 typedef struct {
     const char *name, *description;
-    enum { prpgmod, hashmod, wrappermod, filemod } moduletype;
+    enum { prpgmod, hashmod, wrappermod, filemod, ciphermod } moduletype;
     void *dlhandle;
 } moduleinfo_t;
 
 --
 prpg modules:
 void *permuinit(u_int32_t n, u_int8_t *key, u_int32_t keylen,
-                hashfunction_t *hash, u_int32_t hashlen);
+                moduleinfo_t *hash);
 u_int32_t permugen(void *permuhandle);
 void permuclose(void *permuhandle);
 
@@ -77,5 +78,15 @@ void wrapclose(void *p);
 file modules:
 file_t *fileinit(char *filename);
 void fileclose(file_t *file);
+
+--
+cipher modules:
+u_int32_t cipherkeylen(void);
+u_int32_t cipherivlen(void);
+u_int32_t cipherblocklen(void);
+void *cipherinit(u_int8_t *key, u_int8_t *iv);
+void encipher(void *p, u_int8_t *in, u_int8_t *out, u_int32_t len);
+void decipher(void *p, u_int8_t *in, u_int8_t *out, u_int32_t len);
+void cipherclose(void *p);
 
 --

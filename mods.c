@@ -30,8 +30,9 @@ int loadmod(moduleinfo_t *mip, char *modpath)
 {
     void *dlhandle;
     char *path;
-    char prefixen[4][10] = { "/hash/", "/prpg/", "/file/", "/wrapper/" };
-    int longest_prefix = 9, nprefixen = 4, i;
+    char prefixen[5][10] = { "/hash/", "/prpg/", "/file/", "/wrapper/",
+                             "/cipher/" };
+    int longest_prefix = 9, nprefixen = 5, i;
 
     dlhandle = dlopen(modpath, RTLD_NOW);
     if(dlhandle != NULL) {
@@ -42,6 +43,31 @@ int loadmod(moduleinfo_t *mip, char *modpath)
 
     path = (char *)malloc(strlen(modpath)+longest_prefix+
                           strlen(STEGMODS_TOPDIR)+strlen(STEGMODS_SUFFIX)+10);
+    strcpy(path, ".");
+    strcat(path, modpath);
+    strcat(path, STEGMODS_SUFFIX);
+    
+    dlhandle = dlopen(path, RTLD_NOW);
+    if(dlhandle != NULL) {
+        *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
+        mip->dlhandle = dlhandle;
+        return 0;
+    }
+
+    for(i = 0; i < nprefixen; i++) {
+        strcpy(path, ".");
+        strcat(path, prefixen[i]);
+        strcat(path, modpath);
+        strcat(path, STEGMODS_SUFFIX);
+        
+        dlhandle = dlopen(path, RTLD_NOW);
+        if(dlhandle != NULL) {
+            *mip = (*(moduleinfofunc_t)dlsym(dlhandle, "moduleinfo"))();
+            mip->dlhandle = dlhandle;
+            return 0;
+        }
+    }
+    
     strcpy(path, STEGMODS_TOPDIR);
     strcat(path, modpath);
     strcat(path, STEGMODS_SUFFIX);
