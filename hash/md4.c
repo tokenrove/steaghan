@@ -6,8 +6,8 @@
  * 
  */
 
-#include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "steaghanmods.h"
 
@@ -63,7 +63,7 @@ u_int32_t hashlen(void)
 void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
     u_int32_t X[16], H[MD4_IVSIZE];
-    u_int32_t i, j, k, r;
+    u_int32_t i, j, k;
 
     for(i = 0; i < MD4_IVSIZE; i++) H[i] = md4_iv[i];
 
@@ -75,7 +75,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
         hash_internal(X, H);
     }
 
-    for(j = 0; j < 16; j++) X[j] = 0;
+    memset(X, 0, sizeof(u_int32_t)*16);
     for(i = i*64, j = 0; i < len; i++) {
         X[j] |= d[i]<<(8*(i%4));
         if(i%4 == 3) j++;
@@ -83,10 +83,9 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 
     len *= 8; /* FIXME --> we need a long long */
     X[j] |= (1<<7)<<(8*(i%4));
-    r = MD4_PADMULTIPLE-(((len+1)%MD4_PADMULTIPLE)+64);
-    if(r < 0) {
+    if((signed)(MD4_PADMULTIPLE-(((len+1)%MD4_PADMULTIPLE)+64)) < 0) {
         hash_internal(X, H);
-        for(j = 0; j < 16; j++) X[j] = 0;
+        memset(X, 0, sizeof(u_int32_t)*16);
     }
     j = 14;
 

@@ -8,8 +8,8 @@
  * interesting.
  */
 
-#include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "steaghanmods.h"
 
@@ -85,7 +85,7 @@ u_int32_t hashlen(void)
 void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
 {
     u_int32_t X[16], H[RIPEMD160_IVSIZE];
-    u_int32_t i, j, k, r;
+    u_int32_t i, j, k;
 
     for(i = 0; i < RIPEMD160_IVSIZE; i++) H[i] = ripemd160_iv[i];
 
@@ -97,7 +97,7 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
         hash_internal(X, H);
     }
 
-    for(j = 0; j < 16; j++) X[j] = 0;
+    memset(X, 0, sizeof(u_int32_t)*16);
     for(i = i*64, j = 0; i < len; i++) {
         X[j] |= d[i]<<(8*(i%4));
         if(i%4 == 3) j++;
@@ -106,10 +106,10 @@ void hash(u_int8_t *d, u_int32_t len, u_int8_t *out)
     len *= 8; /* FIXME --> we need a long long instead */
 
     X[j] |= (1<<7)<<(8*(i%4));
-    r = RIPEMD160_PADMULTIPLE-(((len+1)%RIPEMD160_PADMULTIPLE)+64);
-    if(r < 0) {
+    if((signed)(RIPEMD160_PADMULTIPLE-
+                (((len+1)%RIPEMD160_PADMULTIPLE)+64)) < 0) {
         hash_internal(X, H);
-        for(j = 0; j < 16; j++) X[j] = 0;
+        memset(X, 0, sizeof(u_int32_t)*16);
     }
     j = 14;
 
