@@ -1,4 +1,4 @@
-MODS=rc5.so
+MODS=rc5.so null.so
 
 default: $(MODS)
 

@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Tue Jan 25 14:02:14 2000 by tek@wiw.org
- * Revised: Thu Mar  9 08:15:04 2000 by tek@wiw.org
+ * Revised: Mon Mar 20 09:37:19 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -17,32 +17,24 @@
 
 #include "steaghan.h"
 
-void usage(void) {
-    fprintf(stderr, "steaghan [options] [--] <mode> <wrapper file> [secret ");
-    fprintf(stderr, "file]\n");
-    fprintf(stderr, "  where mode is i or e (``i''nject or ``e''xtract).\n");
-    fprintf(stderr, "options: [options marked with * are mandatory]\n");
-    
-    fprintf(stderr, "  -p <prpg module> [defaults to classic]\n");
-    fprintf(stderr, "  -h <hash module> [defaults to ripemd160]\n");
-    fprintf(stderr, "  -f <file module> [defaults to mmap]\n");
-    fprintf(stderr, "* -w <wrapper module>\n");
-    fprintf(stderr, "* -k <key file>\n");
-
-    fprintf(stderr, "\nPlease see steaghan(1) for more detail.\n");
-    exit(EXIT_FAILURE);
-}
+void dealwithargs(steaghanconf_t *conf, char **argv, int argc);
+void usage(void);
+void loadeachmodule(steaghanconf_t *conf);
+void getkeyfromfile(steaghanconf_t *conf);
+void setupwrapper(steaghanconf_t *conf);
+void setupprpg(steaghanconf_t *conf);
 
 int main(int argc, char **argv)
 {
-    u_int32_t wraplen, seclen;
+    u_int32_t seclen;
     u_int8_t *secdata;
     FILE *fp;
-    int i;
     steaghanconf_t conf;
+    
     char default_prpg[] = "classic";
     char default_hash[] = "ripemd160";
     char default_file[] = "mmap";
+    char default_cipher[] = "null";
 
     conf.secret_filename = NULL;
     conf.wrapper_filename = NULL;
@@ -50,124 +42,14 @@ int main(int argc, char **argv)
     conf.prpg_modname = default_prpg;
     conf.hash_modname = default_hash;
     conf.file_modname = default_file;
+    conf.cipher_modname = default_cipher;
     conf.mode = '?';
 
-    for(i = 1; i < argc; i++) {
-        if(argv[i][0] == '-') {
-            if(argv[i][1] == 'p') {
-                if(i+1 < argc) conf.prpg_modname = argv[++i];
-                else usage();
-            } else if(argv[i][1] == 'h') {
-                if(i+1 < argc) conf.hash_modname = argv[++i];
-                else usage();
-            } else if(argv[i][1] == 'f') {
-                if(i+1 < argc) conf.file_modname = argv[++i];
-                else usage();
-            } else if(argv[i][1] == 'w') {
-                if(i+1 < argc) conf.wrapper_modname = argv[++i];
-                else usage();
-            } else if(argv[i][1] == 'k') {
-                if(i+1 < argc) conf.key_filename = argv[++i];
-                else usage();
-            } else if(argv[i][1] == '-') {
-                break;
-            }
-        } else {
-            if(conf.mode == '?' && (argv[i][0] == 'i' || argv[i][0] == 'e'))
-                conf.mode = argv[i][0];
-            else if(conf.wrapper_filename == NULL)
-                conf.wrapper_filename = argv[i];
-            else if(conf.secret_filename == NULL)
-                conf.secret_filename = argv[i];
-            else
-                usage();
-        }
-    }
-
-    /* if any arguments follow, they are the mandatory ones */
-    for(; i < argc; i++) {
-        if(conf.mode == '?' && (argv[i][0] == 'i' || argv[i][0] == 'e'))
-            conf.mode = argv[i][0];
-        else if(conf.wrapper_filename == NULL)
-            conf.wrapper_filename = argv[i];
-        else if(conf.secret_filename == NULL)
-            conf.secret_filename = argv[i];
-        else
-            usage();   
-    }
-
-    if(conf.wrapper_filename == NULL ||
-       conf.wrapper_modname == NULL ||
-       conf.key_filename == NULL) {
-        usage();
-    }
-
-    if(loadmod(&conf.prpg, conf.prpg_modname)) {
-        fprintf(stderr, "failed to load module %s\n", conf.prpg_modname);
-        exit(EXIT_FAILURE);
-    }
-    describemod(&conf.prpg);
-    if(loadmod(&conf.hash, conf.hash_modname)) {
-        fprintf(stderr, "failed to load module %s\n", conf.hash_modname);
-        exit(EXIT_FAILURE);
-    }
-    describemod(&conf.hash);
-    if(loadmod(&conf.wrapper, conf.wrapper_modname)) {
-        fprintf(stderr, "failed to load module %s\n", conf.wrapper_modname);
-        exit(EXIT_FAILURE);
-    }
-    describemod(&conf.wrapper);
-    if(loadmod(&conf.filemod, conf.file_modname)) {
-        fprintf(stderr, "failed to load module %s\n", conf.file_modname);
-        exit(EXIT_FAILURE);
-    }
-    describemod(&conf.filemod);
-
-    fp = fopen(conf.key_filename, "r");
-    if(fp == NULL) {
-        fprintf(stderr, "%s: %s\n", conf.key_filename, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    fseek(fp, 0, SEEK_END);
-    conf.keylen = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    conf.key = (u_int8_t *)malloc(conf.keylen);
-    if(conf.key == NULL) {
-        fprintf(stderr, "Out of memory loading key\n");
-        exit(EXIT_FAILURE);
-    }
-    if(fread(conf.key, 1, conf.keylen, fp) != conf.keylen) {
-        fprintf(stderr, "%s: %s\n", conf.key_filename, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    fclose(fp);
-    
-    conf.file = (*(fileinitfunc_t)dlsym(conf.filemod.dlhandle,
-                                        "fileinit"))(conf.wrapper_filename);
-    if(conf.file == NULL) {
-        fprintf(stderr, "failed to open the specified wrapper file.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    conf.wrapper.handle = (*(wrapinitfunc_t)dlsym(conf.wrapper.dlhandle,
-                                                  "wrapinit"))(conf.file);
-    if(conf.wrapper.handle == NULL) {
-        fprintf(stderr, "failed to setup the wrapper handle. (Is the file");
-        fprintf(stderr, " really the right type?)\n");
-        exit(EXIT_FAILURE);
-    }
-    wraplen = (*(wraplenfunc_t)dlsym(conf.wrapper.dlhandle,
-                                     "wraplen"))(conf.wrapper.handle);
-    conf.prpg.handle = (*(permuinitfunc_t)dlsym(conf.prpg.dlhandle,
-                                                "permuinit"))(wraplen,
-                                                              conf.key,
-                                                              conf.keylen,
-                                                              conf.hash);
-    if(conf.prpg.handle == NULL) {
-        fprintf(stderr, "failed to setup the prpg handle. (Do you have ");
-        fprintf(stderr, " enough memory, did you supply a valid hash?)\n");
-        exit(EXIT_FAILURE);
-    }
+    dealwithargs(&conf, argv, argc);
+    loadeachmodule(&conf);
+    getkeyfromfile(&conf);
+    setupwrapper(&conf);
+    setupprpg(&conf);
 
     if(conf.mode == 'i') {
         fprintf(stderr, "injecting...\n");
@@ -221,6 +103,245 @@ int main(int argc, char **argv)
                              "fileclose"))(conf.file);
 
     exit(EXIT_SUCCESS);
+}
+
+void dealwithargs(steaghanconf_t *conf, char **argv, int argc)
+{
+    int i;
+    
+    for(i = 1; i < argc; i++) {
+        if(argv[i][0] == '-') {
+            if(argv[i][1] == 'p') {
+                if(i+1 < argc) conf->prpg_modname = argv[++i];
+                else usage();
+            } else if(argv[i][1] == 'h') {
+                if(i+1 < argc) conf->hash_modname = argv[++i];
+                else usage();
+            } else if(argv[i][1] == 'f') {
+                if(i+1 < argc) conf->file_modname = argv[++i];
+                else usage();
+            } else if(argv[i][1] == 'w') {
+                if(i+1 < argc) conf->wrapper_modname = argv[++i];
+                else usage();
+            } else if(argv[i][1] == 'k') {
+                if(i+1 < argc) conf->key_filename = argv[++i];
+                else usage();
+            } else if(argv[i][1] == 'c') {
+                if(i+1 < argc) conf->cipher_modname = argv[++i];
+                else usage();
+            } else if(argv[i][1] == '-') {
+                break;
+            }
+        } else {
+            if(conf->mode == '?' && (argv[i][0] == 'i' || argv[i][0] == 'e'))
+                conf->mode = argv[i][0];
+            else if(conf->wrapper_filename == NULL)
+                conf->wrapper_filename = argv[i];
+            else if(conf->secret_filename == NULL)
+                conf->secret_filename = argv[i];
+            else
+                usage();
+        }
+    }
+
+    /* if any arguments follow, they are the mandatory ones */
+    for(; i < argc; i++) {
+        if(conf->mode == '?' && (argv[i][0] == 'i' || argv[i][0] == 'e'))
+            conf->mode = argv[i][0];
+        else if(conf->wrapper_filename == NULL)
+            conf->wrapper_filename = argv[i];
+        else if(conf->secret_filename == NULL)
+            conf->secret_filename = argv[i];
+        else
+            usage();
+    }
+
+    if(conf->wrapper_filename == NULL ||
+       conf->wrapper_modname == NULL ||
+       conf->key_filename == NULL) {
+        usage();
+    }
+}
+
+void usage(void)
+{
+    fprintf(stderr, "steaghan [options] [--] <mode> <wrapper file> [secret ");
+    fprintf(stderr, "file]\n");
+    fprintf(stderr, "  where mode is i or e (``i''nject or ``e''xtract).\n");
+    fprintf(stderr, "options: [options marked with * are mandatory]\n");
+    
+    fprintf(stderr, "  -p <prpg module> [defaults to classic]\n");
+    fprintf(stderr, "  -h <hash module> [defaults to ripemd160]\n");
+    fprintf(stderr, "  -f <file module> [defaults to mmap]\n");
+    fprintf(stderr, "* -w <wrapper module>\n");
+    fprintf(stderr, "* -k <key file>\n");
+    fprintf(stderr, "  -c <cipher module> [defaults to null]\n");
+
+    fprintf(stderr, "\nPlease see steaghan(1) for more detail.\n");
+    exit(EXIT_FAILURE);
+}
+
+void loadeachmodule(steaghanconf_t *conf)
+{
+    if(loadmod(&conf->prpg, conf->prpg_modname)) {
+        fprintf(stderr, "failed to load module %s\n", conf->prpg_modname);
+        exit(EXIT_FAILURE);
+    }
+    describemod(&conf->prpg);
+    if(loadmod(&conf->hash, conf->hash_modname)) {
+        fprintf(stderr, "failed to load module %s\n", conf->hash_modname);
+        exit(EXIT_FAILURE);
+    }
+    describemod(&conf->hash);
+    if(loadmod(&conf->wrapper, conf->wrapper_modname)) {
+        fprintf(stderr, "failed to load module %s\n", conf->wrapper_modname);
+        exit(EXIT_FAILURE);
+    }
+    describemod(&conf->wrapper);
+    if(loadmod(&conf->filemod, conf->file_modname)) {
+        fprintf(stderr, "failed to load module %s\n", conf->file_modname);
+        exit(EXIT_FAILURE);
+    }
+    describemod(&conf->filemod);
+    if(loadmod(&conf->cipher, conf->cipher_modname)) {
+        fprintf(stderr, "failed to load module %s\n", conf->cipher_modname);
+        exit(EXIT_FAILURE);
+    }
+    describemod(&conf->cipher);
+    
+    return;
+}
+
+#define MAXPASSPHRASELEN 128
+
+void getkeyfromfile(steaghanconf_t *conf)
+{
+    FILE *fp;
+    char buffer[MAXPASSPHRASELEN+1];
+    
+    conf->cipherkey = NULL; conf->cipheriv = NULL;
+    conf->cipherkeylen = (*(cipherkeylenfunc_t)dlsym(conf->cipher.dlhandle,
+                                                    "cipherkeylen"))();
+    conf->cipherivlen = (*(cipherivlenfunc_t)dlsym(conf->cipher.dlhandle,
+                                                  "cipherivlen"))();
+    conf->cipherblocklen = (*(cipherblocklenfunc_t)dlsym(conf->cipher.dlhandle,
+                                                         "cipherblocklen"))();
+
+    if(conf->cipherkeylen != 0) {
+        fprintf(stderr, "Enter passphrase: (should not echo)\n");
+        /* FIXME: don't use stty */
+        system("stty -echo");
+        fgets(buffer, MAXPASSPHRASELEN, stdin);
+        if(buffer[strlen(buffer)-1] != '\n') {
+            fprintf(stderr, "Sorry, passphrase is too long. (Break Julian's ");
+            fprintf(stderr, "fingers or something)\n");
+            exit(EXIT_FAILURE);
+        }
+        system("stty echo");
+
+        conf->cipherkey = (u_int8_t *)malloc(conf->cipherkeylen);
+        if(conf->cipherkey == NULL) {
+            fprintf(stderr, "Out of memory on cipher key\n");
+            exit(EXIT_FAILURE);
+        }
+        (*(cipherphrasetokeyfunc_t)dlsym(conf->cipher.dlhandle,
+                                         "cipherphrasetokey"))(buffer,
+                                                               conf->cipherkey,
+                                                               conf->hash);
+        memset(buffer, 0, strlen(buffer));
+    }
+
+    if(conf->cipherivlen != 0) {
+        fprintf(stderr, "Sorry, no IV support yet. (Break Julian's ");
+        fprintf(stderr, "fingers)\n");
+        exit(EXIT_FAILURE);
+    }
+
+    conf->cipher.handle =
+        (*(cipherinitfunc_t)dlsym(conf->cipher.dlhandle,
+                                  "cipherinit"))(conf->cipherkey,
+                                                 conf->cipheriv);
+    if(conf->cipher.handle == NULL) {
+        fprintf(stderr, "Failed to initialize cipher. (maybe your key is ");
+        fprintf(stderr, "weak?)\n");
+        exit(EXIT_FAILURE);
+    }
+
+
+    fp = fopen(conf->key_filename, "r");
+    if(fp == NULL) {
+        fprintf(stderr, "%s: %s\n", conf->key_filename, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    fseek(fp, 0, SEEK_END);
+    conf->keylen = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    conf->key = (u_int8_t *)malloc(conf->keylen);
+    if(conf->key == NULL) {
+        fprintf(stderr, "Out of memory loading key\n");
+        exit(EXIT_FAILURE);
+    }
+    if(fread(conf->key, 1, conf->keylen, fp) != conf->keylen) {
+        fprintf(stderr, "%s: %s\n", conf->key_filename, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    fclose(fp);
+    (*(decipherfunc_t)dlsym(conf->cipher.dlhandle,
+                            "decipher"))(conf->cipher.handle, conf->key,
+                                         conf->key, conf->keylen);
+    if(pkcs5unpad(conf->key, conf->keylen, conf->key, &conf->keylen,
+                  conf->cipherblocklen)) {
+        fprintf(stderr, "Unpadding failed! (truncated file?)\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* FIXME: K = H(Ku o f(W)) here */
+    
+    (*(cipherclosefunc_t)dlsym(conf->cipher.dlhandle,
+                               "cipherclose"))(conf->cipher.handle);
+    fprintf(stderr, "Loaded key successfully\n");
+    return;
+}
+
+void setupwrapper(steaghanconf_t *conf)
+{
+    conf->file = (*(fileinitfunc_t)dlsym(conf->filemod.dlhandle,
+                                        "fileinit"))(conf->wrapper_filename);
+    if(conf->file == NULL) {
+        fprintf(stderr, "failed to open the specified wrapper file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    conf->wrapper.handle = (*(wrapinitfunc_t)dlsym(conf->wrapper.dlhandle,
+                                                  "wrapinit"))(conf->file);
+    if(conf->wrapper.handle == NULL) {
+        fprintf(stderr, "failed to setup the wrapper handle. (Is the file");
+        fprintf(stderr, " really the right type?)\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    return;
+}
+
+void setupprpg(steaghanconf_t *conf)
+{
+    u_int32_t wraplen;
+
+    wraplen = (*(wraplenfunc_t)dlsym(conf->wrapper.dlhandle,
+                                     "wraplen"))(conf->wrapper.handle);
+
+    conf->prpg.handle = (*(permuinitfunc_t)dlsym(conf->prpg.dlhandle,
+                                                "permuinit"))(wraplen,
+                                                              conf->key,
+                                                              conf->keylen,
+                                                              conf->hash);
+    if(conf->prpg.handle == NULL) {
+        fprintf(stderr, "failed to setup the prpg handle. (Do you have ");
+        fprintf(stderr, " enough memory, did you supply a valid hash?)\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    return;
 }
 
 /* EOF main.c */

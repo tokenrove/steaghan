@@ -1,7 +1,7 @@
 /* 
  * steaghanmods.h
  * Created: Tue Nov 23 06:08:49 1999 by tek@wiw.org
- * Revised: Wed Nov 24 02:05:47 1999 by tek@wiw.org
+ * Revised: Mon Mar 20 09:26:35 2000 by tek@wiw.org
  * Copyright 1999 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -47,6 +47,7 @@ typedef u_int32_t (*wraplenfunc_t)(void *);
 typedef u_int8_t (*wrapreadfunc_t)(void *, u_int32_t);
 typedef void (*wrapwritefunc_t)(void *, u_int32_t, u_int8_t);
 typedef void (*wrapclosefunc_t)(void *);
+typedef u_int8_t *(*wrapgetimmobilefunc_t)(void *);
 /* file modules */
 typedef file_t *(*fileinitfunc_t)(char *);
 typedef void (*fileclosefunc_t)(file_t *);
@@ -54,6 +55,7 @@ typedef void (*fileclosefunc_t)(file_t *);
 typedef u_int32_t (*cipherkeylenfunc_t)(void);
 typedef u_int32_t (*cipherivlenfunc_t)(void);
 typedef u_int32_t (*cipherblocklenfunc_t)(void);
+typedef void (*cipherphrasetokeyfunc_t)(char *, u_int8_t *, moduleinfo_t);
 typedef void *(*cipherinitfunc_t)(u_int8_t *, u_int8_t *);
 typedef void (*encipherfunc_t)(void *, u_int8_t *, u_int8_t *, u_int32_t);
 typedef void (*decipherfunc_t)(void *, u_int8_t *, u_int8_t *, u_int32_t);

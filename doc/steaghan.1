@@ -1,0 +1,75 @@
+.\" steaghan.1 -- 
+.\" Created: Mon Mar 20 07:13:05 2000 by tek@wiw.org
+.\" Revised: Mon Mar 20 07:13:05 2000 (pending)
+.\" Copyright 2000 Julian E. C. Squires (tek@wiw.org)
+.\" 
+.\" Permission is granted to make and distribute verbatim copies of this
+.\" manual provided the copyright notice and this permission notice are
+.\" preserved on all copies.
+.\" 
+.\" Permission is granted to copy and distribute modified versions of this
+.\" manual under the conditions for verbatim copying, provided that the
+.\" entire resulting derived work is distributed under the terms of a
+.\" permission notice identical to this one
+.\" 
+.\" Formatted or processed versions of this manual, if unaccompanied by
+.\" the source, must acknowledge the copyright and authors of this work.
+.\" 
+.TH STEAGHAN 1 "20 Mar 2000" "" ""
+.SH NAME
+\fBsteaghan\fR \- a program for steganographic injection and extraction
+.SH SYNOPSIS
+.B steaghan
+[\fIoptions\fR] [\-\-] <\fImode\fR> <\fIwrapper file\fR> [\fIsecret file\fR]
+.SH DESCRIPTION
+.PP
+\fImode\fR is one of ``i'' or ``e'', standing for \fBi\fRnject or
+\fBe\fRxtract, respectively.
+.PP
+\fIsecret file\fR may be either a file name, or ``-'' to read from
+stdin. If it is not specified, stdin will be assumed.
+.TP
+\fB\-p\fR <\fIprpg module\fR>
+Select a PRPG module [defaults to classic]. While the default is a
+``safe bet'', careful selection of a PRPG module can vastly improve
+performance and resource consumption.
+.TP
+\fB\-h\fR <\fIhash module\fR>
+Select a hash module [defaults to ripemd160]. The default is recommended.
+.TP
+\fB\-f\fR <\fIfile module\fR>
+Select a file access module [defaults to mmap]. The default is recommended.
+.TP
+\fB\-w\fR <\fIwrapper module\fR>
+Select a wrapper module (appropriate to the type of the wrapper file). This
+must be specified, as there is no sane default.
+.TP
+\fB\-k\fR <\fIkey file\fR>
+Select an (optionally encrypted) key file, use \fB\-\fR for stdin, but
+note that the key file and the secret file cannot both come from stdin
+in one run.
+.TP
+\fB\-c\fR <\fIcipher module\fR>
+Cipher with which to decrypt the key file. [defaults to null] If a cipher
+other than null is specified, the user will be prompted to enter a passphrase
+on stdin. The default is not safe, but allows pipelining and such.
+.PP
+Note that modules can be specified by their ``short'' name,
+e.g. classic for (STEAGHAN_TOP_DIR)/prpg/classic.so, if they reside in
+one of the known module directories. Alternately, the full path
+(including the .so terminator) can be specified.
+.SH "EXAMPLE OF USAGE"
+.PP
+Injecting data into a JPEG:
+.PP
+steaghan -w jpeg -k myencryptedkeyfile -c rc5 i mywrapperfile.jpeg mysecretfile -p composite
+.PP
+Extracting data from a JPEG:
+.PP
+steaghan -w jpeg -k myencryptedkeyfile -c rc5 e mywrapperfile.jpeg -p
+composite mysecretfile
+.SH AUTHOR
+Julian Squires <tek@wiw.org>.
+.SH BUGS
+This manual page does not cover all the current bugs, and be assured,
+they do exist.

@@ -14,11 +14,12 @@
 #include "steaghanmods.h"
 
 typedef struct {
-    u_int8_t *key;
-    u_int32_t keylen;
+    u_int8_t *key, *cipherkey, *cipheriv;
+    u_int32_t keylen, cipherkeylen, cipherivlen, cipherblocklen;
     char *key_filename, *wrapper_filename, *secret_filename;
-    char *prpg_modname, *hash_modname, *wrapper_modname, *file_modname;
-    moduleinfo_t prpg, hash, wrapper, filemod;
+    char *prpg_modname, *hash_modname, *wrapper_modname, *file_modname,
+        *cipher_modname;
+    moduleinfo_t prpg, hash, wrapper, filemod, cipher;
     file_t *file;
     char mode;
 } steaghanconf_t;
@@ -34,6 +35,12 @@ extern void describemod(moduleinfo_t *mip);
 extern void statusbar_init(int total_);
 extern void statusbar_update(int increment);
 extern void statusbar_close(void);
+
+extern void pkcs5pad(u_int8_t *in, u_int32_t inlen, u_int8_t *out,
+                     u_int32_t *outlen, u_int8_t blocklen);
+extern int pkcs5unpad(u_int8_t *in, u_int32_t inlen, u_int8_t *out,
+                      u_int32_t *outlen, u_int8_t blocklen);
+
 
 #endif
 

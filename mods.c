@@ -1,7 +1,7 @@
 /* 
  * mods.c
  * Created: Tue Jan 25 12:43:43 2000 by tek@wiw.org
- * Revised: Thu Mar  9 07:44:23 2000 by tek@wiw.org
+ * Revised: Mon Mar 20 10:18:12 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -104,6 +104,7 @@ void describemod(moduleinfo_t *mip)
     else if(mip->moduletype == hashmod) fprintf(stderr, "a hash");
     else if(mip->moduletype == wrappermod) fprintf(stderr, "a wrapper");
     else if(mip->moduletype == filemod) fprintf(stderr, "a file");
+    else if(mip->moduletype == ciphermod) fprintf(stderr, "a cipher");
     else fprintf(stderr, "an unknown");
     fprintf(stderr, " module.\n");
     return;

@@ -55,6 +55,13 @@ u_int32_t cipherblocklen(void)
     return RC5_WORDLEN*2;
 }
 
+void cipherphrasetokey(char *phrase, u_int8_t *key, moduleinfo_t hash)
+{
+    /* FIXME! */
+    memmove(key, phrase, RC5_KEYLEN);
+    return;
+}
+
 void *cipherinit(u_int8_t *key, u_int8_t *iv)
 {
     cipherhandle_t *p;

@@ -6,8 +6,8 @@ default: $(UTILS)
 hash: hash.o ../mods.o
 	$(CC) $(CFLAGS) -o hash $^ $(LDFLAGS)
 
-encipher: encipher.o ../mods.o
+encipher: encipher.o sharedcipher.o ../mods.o ../pkcs5pad.o
 	$(CC) $(CFLAGS) -o encipher $^ $(LDFLAGS)
 
-decipher: decipher.o ../mods.o
+decipher: decipher.o sharedcipher.o ../mods.o ../pkcs5pad.o
 	$(CC) $(CFLAGS) -o decipher $^ $(LDFLAGS)

@@ -4,7 +4,7 @@ CFLAGS=-Wall -g -pedantic -ansi -O9 -funroll-loops
 CPPFLAGS=$(DEFINES) -I$(CURDIR)
 LDFLAGS=-ldl
 export CFLAGS CPPFLAGS LDFLAGS
-STEGOBJS=main.o mods.o extract.o inject.o statusbar.o
+STEGOBJS=main.o mods.o extract.o inject.o statusbar.o pkcs5pad.o
 
 include Rules.make
 
