@@ -1,4 +1,6 @@
 
-default: 
-CFLAGS=-rdynamic -Wall -pedantic -g -ansi -I..
+TESTS=
 
+default: $(TESTS)
+
+include ../Rules.make

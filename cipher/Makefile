@@ -1,4 +1,4 @@
-MODS=rc5.so null.so rot13.so
+MODS=rc5.so rc5-cbc.so null.so rot13.so
 
 default: $(MODS)
 

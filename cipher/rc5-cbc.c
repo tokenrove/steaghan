@@ -1,7 +1,7 @@
 /* 
  * rc5.c
  * Created: Thu Mar  9 02:41:39 2000 by tek@wiw.org
- * Revised: Tue Mar 21 04:21:46 2000 by tek@wiw.org
+ * Revised: Sat Mar 25 20:39:11 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -15,7 +15,7 @@
 #include "steaghanmods.h"
 
 #define RC5_MODULENAME "rc5"
-#define RC5_MODULEDESC "RC5/16/12/4 block cipher in ECB mode"
+#define RC5_MODULEDESC "RC5/16/12/4 block cipher in CBC mode"
 
 #define RC5_KEYLEN  16
 #define RC5_NROUNDS 12
@@ -29,6 +29,7 @@
 
 typedef struct {
     u_int32_t *K;
+    u_int8_t last[RC5_WORDLEN*2];
 } cipherhandle_t;
 
 /* internal functions */
@@ -48,7 +49,7 @@ u_int32_t cipherkeylen(void)
 
 u_int32_t cipherivlen(void)
 {
-    return 0;
+    return RC5_WORDLEN*2;
 }
 
 u_int32_t cipherblocklen(void)
@@ -96,6 +97,8 @@ void *cipherinit(u_int8_t *key, u_int8_t *iv)
     p->K = (u_int32_t *)malloc((2*RC5_NROUNDS+2)*sizeof(u_int32_t));
     if(p->K == NULL) return NULL;
 
+    memcpy(p->last, iv, RC5_WORDLEN*2);
+
     c = (RC5_KEYLEN+RC5_WORDLEN-1)/RC5_WORDLEN;
     for(i = 0; i < c; i++) {
         L[i] = 0;
@@ -131,17 +134,22 @@ void encipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
 
     for(i = 0; len >= (2*RC5_WORDLEN); len -= (2*RC5_WORDLEN), i++) {
 #ifdef LITTLE_ENDIAN
-        ((u_int32_t *)out)[2*i] = ((u_int32_t *)in)[2*i];
-        ((u_int32_t *)out)[2*i+1] = ((u_int32_t *)in)[2*i+1];
-        encipher_internal(p->K, (u_int32_t *)(out+2*i*4),
-                          (u_int32_t *)(out+(2*i+1)*4));
+        ((u_int32_t *)out)[2*i] =
+            ((u_int32_t *)in)[2*i]^((u_int32_t *)p->last)[0];
+        ((u_int32_t *)out)[2*i+1] =
+            ((u_int32_t *)in)[2*i+1]^((u_int32_t *)p->last)[1];
+        encipher_internal(p->K, (u_int32_t *)(out+2*i*RC5_WORDLEN),
+                          (u_int32_t *)(out+(2*i+1)*RC5_WORDLEN));
 #else
-        A=in[8*i];A|=in[8*i+1]<<8;A|=in[8*i+2]<<16;A|=in[8*i+3]<<24;
-        B=in[8*i+4];B|=in[8*i+5]<<8;B|=in[8*i+6]<<16;B|=in[8*i+7]<<24;
+        A=in[8*i]^p->last[0];A|=(in[8*i+1]^p->last[1])<<8;
+        A|=(in[8*i+2]^p->last[2])<<16;A|=(in[8*i+3]^p->last[3])<<24;
+        B=in[8*i+4]^p->last[4];B|=(in[8*i+5]^p->last[5])<<8;
+        B|=(in[8*i+6]^p->last[6])<<16;B|=(in[8*i+7]^p->last[7])<<24;
         encipher_internal(p->K, &A, &B);
         out[8*i]=A;out[8*i+1]=A>>8;out[8*i+2]=A>>16;out[8*i+3]=A>>24;
         out[8*i+4]=B;out[8*i+5]=B>>8;out[8*i+6]=B>>16;out[8*i+7]=B>>24;
 #endif
+        memcpy(p->last, out+(2*i*RC5_WORDLEN), 2*RC5_WORDLEN);
     }
     return;
 }
@@ -153,19 +161,26 @@ void decipher(void *p_, u_int8_t *in, u_int8_t *out, u_int32_t len)
     u_int32_t A, B;
 #endif
     int i;
+    u_int8_t buf[RC5_WORDLEN*2];
 
     for(i = 0; len >= (2*RC5_WORDLEN); len -= (2*RC5_WORDLEN), i++) {
 #ifdef LITTLE_ENDIAN
         ((u_int32_t *)out)[2*i] = ((u_int32_t *)in)[2*i];
         ((u_int32_t *)out)[2*i+1] = ((u_int32_t *)in)[2*i+1];
-        decipher_internal(p->K, (u_int32_t *)(out+2*i*4),
-                          (u_int32_t *)(out+(2*i+1)*4));
+        memcpy(buf, p->last, 2*RC5_WORDLEN);
+        memcpy(p->last, out+(2*i*RC5_WORDLEN), 2*RC5_WORDLEN);
+        decipher_internal(p->K, (u_int32_t *)(out+2*i*RC5_WORDLEN),
+                          (u_int32_t *)(out+(2*i+1)*RC5_WORDLEN));
+        ((u_int32_t *)out)[2*i] ^= ((u_int32_t *)buf)[0];
+        ((u_int32_t *)out)[2*i+1] ^= ((u_int32_t *)buf)[1];
 #else
         A=in[8*i];A|=in[8*i+1]<<8;A|=in[8*i+2]<<16;A|=in[8*i+3]<<24;
         B=in[8*i+4];B|=in[8*i+5]<<8;B|=in[8*i+6]<<16;B|=in[8*i+7]<<24;
         decipher_internal(p->K, &A, &B);
-        out[8*i]=A;out[8*i+1]=A>>8;out[8*i+2]=A>>16;out[8*i+3]=A>>24;
-        out[8*i+4]=B;out[8*i+5]=B>>8;out[8*i+6]=B>>16;out[8*i+7]=B>>24;
+        out[8*i]=A^buf[0];out[8*i+1]=(A>>8)^buf[1];
+        out[8*i+2]=(A>>16)^buf[2];out[8*i+3]=(A>>24)^buf[3];
+        out[8*i+4]=B^buf[4];out[8*i+5]=(B>>8)^buf[5];
+        out[8*i+6]=(B>>16)^buf[6];out[8*i+7]=(B>>24)^buf[7];
 #endif
     }
     return;

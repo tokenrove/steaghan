@@ -1,7 +1,7 @@
 /* 
  * steaghan.h
  * Created: Tue Jan 25 13:32:40 2000 by tek@wiw.org
- * Revised: Wed Mar  8 15:56:03 2000 by tek@wiw.org
+ * Revised: Sat Mar 25 22:10:23 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -28,6 +28,10 @@ extern void inject(moduleinfo_t prpg, moduleinfo_t wrapper, u_int8_t *secdata,
                    u_int32_t seclen);
 extern u_int8_t *extract(moduleinfo_t prpg, moduleinfo_t wrapper,
                          u_int32_t *seclen);
+
+extern void getpassphrase(char **passphrase);
+extern void randominit(void);
+extern u_int8_t randombyte(void);
 
 extern int loadmod(moduleinfo_t *mip, char *modpath);
 extern void describemod(moduleinfo_t *mip);

@@ -1,10 +1,10 @@
 
-DEFINES=-DSTEGMODS_TOPDIR='"/usr/local/lib/steaghan"' #-DLITTLE_ENDIAN
-CFLAGS=-Wall -g -pedantic -ansi -O9 -funroll-loops
+DEFINES=-DSTEGMODS_TOPDIR='"/usr/local/lib/steaghan"' -DLITTLE_ENDIAN
+CFLAGS=-Wall -g -pedantic -ansi #-O9 -funroll-loops
 CPPFLAGS=$(DEFINES) -I$(CURDIR)
 LDFLAGS=-ldl
 export CFLAGS CPPFLAGS LDFLAGS
-STEGOBJS=main.o mods.o extract.o inject.o statusbar.o pkcs5pad.o
+STEGOBJS=main.o mods.o extract.o inject.o statusbar.o pkcs5pad.o system.o
 
 include Rules.make
 

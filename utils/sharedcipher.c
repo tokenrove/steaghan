@@ -1,7 +1,7 @@
 /* 
  * sharedcipher.c
  * Created: Mon Mar 20 09:38:21 2000 by tek@wiw.org
- * Revised: Mon Mar 20 17:18:50 2000 by tek@wiw.org
+ * Revised: Sat Mar 25 21:56:58 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -34,6 +34,9 @@ void sharedcipher(int mode, int argc, char **argv)
     encipherfunc_t encipher;
     decipherfunc_t decipher;
     u_int8_t *file, *key, *iv, c = ' ';
+    hashfunc_t hashfunc;
+    u_int32_t hashlen, iterlen = 0;
+    u_int8_t *buffer;
     char *filename, *ciphername, *keyname, *hashname;
     int fd, i;
     u_int32_t length, keylen, ivlen, blocklen;
@@ -75,6 +78,9 @@ void sharedcipher(int mode, int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    hashfunc = (hashfunc_t)dlsym(hash.dlhandle, "hash");
+    hashlen = (*(hashlenfunc_t)dlsym(hash.dlhandle, "hashlen"))();
+
     keylen=(*(cipherkeylenfunc_t)dlsym(cipher.dlhandle, "cipherkeylen"))();
     key = NULL;
     if(keylen != 0) {
@@ -85,8 +91,12 @@ void sharedcipher(int mode, int argc, char **argv)
         }
 
         if(keyname == NULL) {
-            fprintf(stderr, "The %s cipher requires a key\n", ciphername);
-            exit(EXIT_FAILURE);
+            if(filename == NULL || !strcmp(filename, "-")) {
+                fprintf(stderr, "The %s cipher requires a key\n", ciphername);
+                exit(EXIT_FAILURE);
+            }
+
+            getpassphrase(&keyname);
         }
         (*(cipherphrasetokeyfunc_t)dlsym(cipher.dlhandle,
                                          "cipherphrasetokey"))(keyname,
@@ -97,8 +107,35 @@ void sharedcipher(int mode, int argc, char **argv)
     ivlen=(*(cipherivlenfunc_t)dlsym(cipher.dlhandle, "cipherivlen"))();
     iv = NULL;
     if(ivlen != 0) {
-        fprintf(stderr, "IVs not supported\n");
-        exit(EXIT_FAILURE);
+        iv = (u_int8_t *)malloc(ivlen);
+        if(iv == NULL) {
+            fprintf(stderr, "Out of memory on IV\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if(mode == 0) {
+            buffer = (u_int8_t *)malloc(hashlen/8);
+
+            randominit();
+            for(i = 0; i < hashlen/8; i++)
+                buffer[i] = randombyte();
+            (*hashfunc)((u_int8_t *)buffer, hashlen/8, buffer);
+            if(hashlen/8 < ivlen) {
+                memmove(iv, buffer, hashlen/8);
+                iterlen += hashlen/8;
+                while(iterlen < ivlen) {
+                    (*hashfunc)(buffer, hashlen/8, buffer);
+                    memmove(iv+iterlen, buffer, hashlen/8);
+                    iterlen += hashlen/8;
+                }
+                (*hashfunc)(buffer, hashlen/8, buffer);
+                memmove(iv+iterlen-hashlen/8, buffer, iterlen%ivlen);
+
+            } else {
+                memmove(iv, buffer, ivlen);
+            }
+            free(buffer);  
+        }
     }
 
     blocklen=(*(cipherblocklenfunc_t)dlsym(cipher.dlhandle,
@@ -107,45 +144,78 @@ void sharedcipher(int mode, int argc, char **argv)
     encipher = (encipherfunc_t)dlsym(cipher.dlhandle, "encipher");
     decipher = (decipherfunc_t)dlsym(cipher.dlhandle, "decipher");
 
-    cipher.handle = (*(cipherinitfunc_t)dlsym(cipher.dlhandle,
-                                              "cipherinit"))(key, iv);
-    if(cipher.handle == NULL) {
-        fprintf(stderr, "Failed to initialize cipher. (maybe your key is ");
-        fprintf(stderr, "weak?)\n");
-        exit(EXIT_FAILURE);
-    }
-
     if(filename != NULL && strcmp(filename, "-")) {
-        fd = open(filename, O_RDWR);
-        if(fd == -1) {
-            fprintf(stderr, "%s: %s", filename, strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        length = lseek(fd, 0, SEEK_END);
-        if(mode == 0 && blocklen > 1) {
-            for(i = length;
-                i < length+(blocklen-(length%blocklen)); i++) {
-                write(fd, &c, 1);
+        if(ivlen == 0) {
+            fd = open(filename, O_RDWR);
+            if(fd == -1) {
+                fprintf(stderr, "%s: %s", filename, strerror(errno));
+                exit(EXIT_FAILURE);
             }
-            lseek(fd, 0, SEEK_SET);
 
-            file = (u_int8_t *)mmap(0, length+(blocklen-(length%blocklen)),
-                                    PROT_READ|PROT_WRITE, MAP_SHARED, fd,
-                                    0);
-        } else {
-            lseek(fd, 0, SEEK_SET);
-
-            file = (u_int8_t *)mmap(0, length, PROT_READ|PROT_WRITE,
-                                    MAP_SHARED, fd, 0);
-        }
+            length = lseek(fd, 0, SEEK_END);
+            if(mode == 0 && blocklen > 1) {
+                for(i = length;
+                    i < length+(blocklen-(length%blocklen)); i++) {
+                    write(fd, &c, 1);
+                }
+                lseek(fd, 0, SEEK_SET);
+                
+                file = (u_int8_t *)mmap(0, length+(blocklen-(length%blocklen)),
+                                        PROT_READ|PROT_WRITE, MAP_SHARED, fd,
+                                        0);
+            } else {
+                lseek(fd, 0, SEEK_SET);
+                
+                file = (u_int8_t *)mmap(0, length, PROT_READ|PROT_WRITE,
+                                        MAP_SHARED, fd, 0);
+            }
         
-        if((void *)file == (void *)-1) {
-            fprintf(stderr, "mmap failure: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
+            if((void *)file == (void *)-1) {
+                fprintf(stderr, "mmap failure: %s\n", strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+
+        } else {
+            fd = open(filename, O_RDWR);
+            if(fd == -1) {
+                fprintf(stderr, "%s: %s", filename, strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+            
+            length = lseek(fd, 0, SEEK_END);
+            lseek(fd, 0, SEEK_SET);
+            
+            if(mode == 0) {
+                if(blocklen > 1)
+                    file = (u_int8_t *)malloc(length+(blocklen-
+                                                      (length%blocklen)));
+                else
+                    file = (u_int8_t *)malloc(length);
+                if(file == NULL) {
+                    fprintf(stderr, "Out of memory\n");
+                    exit(EXIT_FAILURE);
+                }
+
+            } else {
+                length -= ivlen;
+                file = (u_int8_t *)malloc(length);
+                if(file == NULL) {
+                    fprintf(stderr, "Out of memory\n");
+                    exit(EXIT_FAILURE);
+                }
+                read(fd, iv, ivlen);
+            }
+
+            read(fd, file, length);
+            lseek(fd, 0, SEEK_SET);
+
+            if(mode == 0) {
+                write(fd, iv, ivlen);
+            }
         }
 
     } else {
+        fd = -1;
         file = NULL;
         length = 0;
 
@@ -157,9 +227,18 @@ void sharedcipher(int mode, int argc, char **argv)
         file = (u_int8_t *)realloc(file, length+blocklen);
     }
 
+    cipher.handle = (*(cipherinitfunc_t)dlsym(cipher.dlhandle,
+                                              "cipherinit"))(key, iv);
+    if(cipher.handle == NULL) {
+        fprintf(stderr, "Failed to initialize cipher. (maybe your key is ");
+        fprintf(stderr, "weak?)\n");
+        exit(EXIT_FAILURE);
+    }
+
     if(mode == 0) {
         if(blocklen > 1) pkcs5pad(file, length, file, &length, blocklen);
         (*encipher)(cipher.handle, file, file, length);
+
     } else {
         (*decipher)(cipher.handle, file, file, length);
         if(blocklen > 1) {
@@ -168,13 +247,26 @@ void sharedcipher(int mode, int argc, char **argv)
                 exit(EXIT_FAILURE);
             }
 
-            ftruncate(fd, length);
+            if(fd != -1)
+                ftruncate(fd, length);
         }
     }
 
-    if(filename != NULL && strcmp(filename, "-")) {
-        munmap(file, length);
-        close(fd);
+    if(fd != -1) {
+        if(ivlen == 0) {
+            munmap(file, length);
+            close(fd);
+
+        } else {
+            if(mode == 0) {
+                lseek(fd, ivlen, SEEK_SET);
+            } else {
+                lseek(fd, 0, SEEK_SET);
+            }
+
+            write(fd, file, length);
+            free(file);
+        }
 
     } else {
         fwrite(file, 1, length, stdout);

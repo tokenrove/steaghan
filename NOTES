@@ -39,8 +39,7 @@ wrapper/pgm and wrapper/ppm: can't find P2/P3 style files with which to test!
 wrapper/bmp: only useful at bpp == 24, should complain, otherwise.
 wrapper/wav: only PCM support, no support for RIFFs with different chunk
              layouts, unreliable (maybe). 
-hash/md*, hash/ripemd160: some minor inefficiencies, certain cases seem
-			  to break them, strangely.
+hash/md*, hash/ripemd160: some minor inefficiencies.
 cipher/rc5: only supports ECB mode
 see also all the FIXMEs in the code
 

@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Tue Jan 25 14:02:14 2000 by tek@wiw.org
- * Revised: Mon Mar 20 17:16:50 2000 by tek@wiw.org
+ * Revised: Sat Mar 25 22:07:45 2000 by tek@wiw.org
  * Copyright 2000 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -212,13 +212,11 @@ void loadeachmodule(steaghanconf_t *conf)
     return;
 }
 
-#define MAXPASSPHRASELEN 128
-
 void getkeyfromfile(steaghanconf_t *conf)
 {
     FILE *fp;
-    char buffer[MAXPASSPHRASELEN+1];
-    
+    char *passphrase;
+
     conf->cipherkey = NULL; conf->cipheriv = NULL;
     conf->cipherkeylen = (*(cipherkeylenfunc_t)dlsym(conf->cipher.dlhandle,
                                                     "cipherkeylen"))();
@@ -228,16 +226,7 @@ void getkeyfromfile(steaghanconf_t *conf)
                                                          "cipherblocklen"))();
 
     if(conf->cipherkeylen != 0) {
-        fprintf(stderr, "Enter passphrase: (should not echo)\n");
-        /* FIXME: don't use stty */
-        system("stty -echo");
-        fgets(buffer, MAXPASSPHRASELEN, stdin);
-        if(buffer[strlen(buffer)-1] != '\n') {
-            fprintf(stderr, "Sorry, passphrase is too long. (Break Julian's ");
-            fprintf(stderr, "fingers or something)\n");
-            exit(EXIT_FAILURE);
-        }
-        system("stty echo");
+        getpassphrase(&passphrase);
 
         conf->cipherkey = (u_int8_t *)malloc(conf->cipherkeylen);
         if(conf->cipherkey == NULL) {
@@ -245,16 +234,30 @@ void getkeyfromfile(steaghanconf_t *conf)
             exit(EXIT_FAILURE);
         }
         (*(cipherphrasetokeyfunc_t)dlsym(conf->cipher.dlhandle,
-                                         "cipherphrasetokey"))(buffer,
+                                         "cipherphrasetokey"))(passphrase,
                                                                conf->cipherkey,
                                                                conf->hash);
-        memset(buffer, 0, strlen(buffer));
+        memset(passphrase, 0, strlen(passphrase));
+        free(passphrase);
     }
 
-    if(conf->cipherivlen != 0) {
-        fprintf(stderr, "Sorry, no IV support yet. (Break Julian's ");
-        fprintf(stderr, "fingers)\n");
+    fp = fopen(conf->key_filename, "r");
+    if(fp == NULL) {
+        fprintf(stderr, "%s: %s\n", conf->key_filename, strerror(errno));
         exit(EXIT_FAILURE);
+    }
+    fseek(fp, 0, SEEK_END);
+    conf->keylen = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    if(conf->cipherivlen != 0) {
+        conf->keylen -= conf->cipherivlen;
+        conf->cipheriv = (u_int8_t *)malloc(conf->cipherivlen);
+        if(conf->cipheriv == NULL) {
+            fprintf(stderr, "Out of memory on cipher IV\n");
+            exit(EXIT_FAILURE);
+        }
+        fread(conf->cipheriv, 1, conf->cipherivlen, fp);
     }
 
     conf->cipher.handle =
@@ -267,15 +270,6 @@ void getkeyfromfile(steaghanconf_t *conf)
         exit(EXIT_FAILURE);
     }
 
-
-    fp = fopen(conf->key_filename, "r");
-    if(fp == NULL) {
-        fprintf(stderr, "%s: %s\n", conf->key_filename, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    fseek(fp, 0, SEEK_END);
-    conf->keylen = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
     conf->key = (u_int8_t *)malloc(conf->keylen);
     if(conf->key == NULL) {
         fprintf(stderr, "Out of memory loading key\n");
@@ -286,6 +280,7 @@ void getkeyfromfile(steaghanconf_t *conf)
         exit(EXIT_FAILURE);
     }
     fclose(fp);
+
     (*(decipherfunc_t)dlsym(conf->cipher.dlhandle,
                             "decipher"))(conf->cipher.handle, conf->key,
                                          conf->key, conf->keylen);
@@ -297,9 +292,11 @@ void getkeyfromfile(steaghanconf_t *conf)
     }
 
     /* FIXME: K = H(Ku o f(W)) here */
-    
+
     (*(cipherclosefunc_t)dlsym(conf->cipher.dlhandle,
                                "cipherclose"))(conf->cipher.handle);
+    free(conf->cipheriv);
+    free(conf->cipherkey);
     fprintf(stderr, "Loaded key successfully\n");
     return;
 }
